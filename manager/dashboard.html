@@ -1,33 +1,295 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Operations overview - Logistics &amp; Delivery</title>
+
+  <!-- Font na gagamitin ng buong page -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+  <!-- Dito galing ang lahat ng kulay at itsura (CSS file) -->
   <link rel="stylesheet" href="../css/styles.css">
 </head>
-<!-- Role-protected operations report page: data-role must match the Supabase role name. -->
+
+
+<!--
+  BODY
+  - data-role: dapat kapareho ng role ng user sa Supabase.
+    Kung hindi pareho, hindi siya makakapasok sa page na ito.
+-->
 <body class="guarded staff-page" data-root="../" data-role="Operations Manager">
-  <!-- Header shows the authenticated manager and provides sign-out. -->
-  <header class="topbar"><a class="brand" href="../index.html">Logistics &amp; Delivery</a><div class="who"><span id="userName"></span><button class="btn small secondary" id="logoutBtn" type="button">Sign out</button></div></header>
+
+
+  <!-- ============================================= -->
+  <!-- HEADER (taas ng page)                         -->
+  <!-- ============================================= -->
+  <header class="topbar">
+
+    <!-- Pangalan ng website. Pag pinindot, babalik sa home -->
+    <a class="brand" href="../index.html">Logistics &amp; Delivery</a>
+
+    <div class="who">
+      <!-- Dito lalabas ang pangalan ng naka-login (galing sa JS) -->
+      <span id="userName"></span>
+
+      <!-- Button para mag-logout -->
+      <button class="btn small secondary" id="logoutBtn" type="button">Sign out</button>
+    </div>
+
+  </header>
+
+
   <main>
-    <section class="page-heading"><div><p class="eyebrow">MANAGEMENT</p><h1>Operations overview</h1><p class="muted">Monitor delivery performance and operational issues.</p></div><button class="btn secondary" id="refreshBtn" type="button">Refresh data</button></section>
+
+    <!-- ============================================= -->
+    <!-- PAMAGAT NG PAGE                               -->
+    <!-- ============================================= -->
+    <section class="page-heading">
+
+      <div>
+        <p class="eyebrow">MANAGEMENT</p>
+        <h1>Operations overview</h1>
+        <p class="muted">Monitor delivery performance and operational issues.</p>
+      </div>
+
+      <!-- Button para i-reload ang data -->
+      <button class="btn secondary" id="refreshBtn" type="button">Refresh data</button>
+
+    </section>
+
+    <!-- Mensahe sa taas (lumalabas lang kapag may error o balita) -->
     <p id="staffNotice" class="msg" hidden></p>
-    <!-- Tabs and matching data-staff-panel sections organize operations and reports. -->
+
+
+    <!-- ============================================= -->
+    <!-- MGA TAB (menu para lumipat ng seksyon)        -->
+    <!-- Ang data-tab dito ay dapat kapareho ng        -->
+    <!-- data-staff-panel sa mga seksyon sa baba.      -->
+    <!-- ============================================= -->
     <nav class="tabs" id="staffTabs" aria-label="Staff dashboard sections">
-      <button type="button" data-tab="overview" aria-selected="true">Overview</button><button type="button" data-tab="shipments" aria-selected="false">Shipments</button><button type="button" data-tab="assignments" aria-selected="false">Assignments</button><button type="button" data-tab="payments" aria-selected="false">Payments</button><button type="button" data-tab="cases" aria-selected="false">Incidents &amp; complaints</button><button type="button" data-tab="admin" aria-selected="false">Administration</button>
+      <button type="button" data-tab="overview"    aria-selected="true">Overview</button>
+      <button type="button" data-tab="shipments"   aria-selected="false">Shipments</button>
+      <button type="button" data-tab="assignments" aria-selected="false">Assignments</button>
+      <button type="button" data-tab="payments"    aria-selected="false">Payments</button>
+      <button type="button" data-tab="cases"       aria-selected="false">Incidents &amp; complaints</button>
+      <button type="button" data-tab="admin"       aria-selected="false">Administration</button>
     </nav>
-    <section data-staff-panel="overview" class="staff-panel"><div id="stats" class="stats-grid"></div><div class="panel"><h2>Operational priorities</h2><ul class="check-list"><li>Review active and delayed shipments.</li><li>Follow up on failed deliveries, incidents, and complaints.</li><li>Use reports to monitor shipment and payment activity.</li></ul></div></section>
-    <section data-staff-panel="shipments" class="staff-panel" hidden><div class="panel"><div class="panel-heading"><div><h2>All shipments</h2><p class="muted">Shipment visibility is enforced by Supabase Row Level Security.</p></div><label class="search-field"><span class="sr-only">Search shipments</span><input id="shipmentSearch" type="search" placeholder="Search tracking or recipient"></label></div><div class="table-wrap"><table><thead><tr><th>Tracking number</th><th>Recipient</th><th>Status</th><th>Booked</th><th>Actions</th></tr></thead><tbody id="shipmentRows"></tbody></table></div><p id="emptyShipments" class="muted" hidden>No shipments match your search.</p></div></section>
-    <section data-staff-panel="assignments" class="staff-panel" hidden><div class="panel"><h2>Assign a delivery rider</h2><form id="assignForm"><label for="assignmentShipment">Shipment</label><select id="assignmentShipment" required></select><label for="assignmentRider">Rider</label><select id="assignmentRider" required></select><button class="btn" id="assignBtn" type="submit">Assign rider</button><p id="assignmentMsg" class="msg" hidden></p></form></div></section>
-    <section data-staff-panel="payments" class="staff-panel" hidden><div class="panel"><h2>Payment report</h2><p class="muted">Read-only payment summary. Updates are limited to Finance Officers and Administrators.</p><div class="table-wrap"><table><thead><tr><th>Tracking</th><th>Recipient</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody id="paymentRows"></tbody></table></div><p id="emptyPayments" class="muted" hidden>No payment records yet.</p></div></section>
-    <section data-staff-panel="cases" class="staff-panel" hidden><div class="panel"><h2>Incidents &amp; complaints</h2><div class="table-wrap"><table><thead><tr><th>Type</th><th>Tracking</th><th>Issue</th><th>Status</th><th>Reported</th></tr></thead><tbody id="caseRows"></tbody></table></div><p id="emptyCases" class="muted" hidden>No incidents or complaints to show.</p></div></section>
-    <section data-staff-panel="admin" class="staff-panel" hidden><div class="panel"><h2>Administration</h2><p class="muted">System administration is restricted to administrators.</p></div></section>
+
+
+    <!-- ============================================= -->
+    <!-- TAB 1: OVERVIEW                               -->
+    <!-- Ito ang unang makikita pag binuksan ang page  -->
+    <!-- ============================================= -->
+    <section data-staff-panel="overview" class="staff-panel">
+
+      <!-- Dito ilalagay ng JS ang mga bilang (stats) -->
+      <div id="stats" class="stats-grid"></div>
+
+      <div class="panel">
+        <h2>Operational priorities</h2>
+        <ul class="check-list">
+          <li>Review active and delayed shipments.</li>
+          <li>Follow up on failed deliveries, incidents, and complaints.</li>
+          <li>Use reports to monitor shipment and payment activity.</li>
+        </ul>
+      </div>
+
+    </section>
+
+
+    <!-- ============================================= -->
+    <!-- TAB 2: SHIPMENTS                              -->
+    <!-- Lahat ng padala, may search                   -->
+    <!-- ============================================= -->
+    <section data-staff-panel="shipments" class="staff-panel" hidden>
+
+      <div class="panel">
+
+        <!-- Pamagat + search box -->
+        <div class="panel-heading">
+
+          <div>
+            <h2>All shipments</h2>
+            <p class="muted">Shipment visibility is enforced by Supabase Row Level Security.</p>
+          </div>
+
+          <!-- Lagayan ng hahanapin -->
+          <label class="search-field">
+            <span class="sr-only">Search shipments</span>
+            <input id="shipmentSearch" type="search" placeholder="Search tracking or recipient">
+          </label>
+
+        </div>
+
+        <!-- Table ng mga padala -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tracking number</th>
+                <th>Recipient</th>
+                <th>Status</th>
+                <th>Booked</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <!-- Dito ilalagay ng JS ang mga row -->
+            <tbody id="shipmentRows"></tbody>
+          </table>
+        </div>
+
+        <!-- Lalabas lang kapag walang nahanap -->
+        <p id="emptyShipments" class="muted" hidden>No shipments match your search.</p>
+
+      </div>
+
+    </section>
+
+
+    <!-- ============================================= -->
+    <!-- TAB 3: ASSIGNMENTS                            -->
+    <!-- Mag-assign ng rider sa padala                 -->
+    <!-- ============================================= -->
+    <section data-staff-panel="assignments" class="staff-panel" hidden>
+
+      <div class="panel">
+        <h2>Assign a delivery rider</h2>
+
+        <form id="assignForm">
+
+          <!-- Piliin ang padala (pinupuno ng JS) -->
+          <label for="assignmentShipment">Shipment</label>
+          <select id="assignmentShipment" required></select>
+
+          <!-- Piliin ang rider (pinupuno ng JS) -->
+          <label for="assignmentRider">Rider</label>
+          <select id="assignmentRider" required></select>
+
+          <!-- Save button at mensahe pagkatapos mag-save -->
+          <button class="btn" id="assignBtn" type="submit">Assign rider</button>
+          <p id="assignmentMsg" class="msg" hidden></p>
+
+        </form>
+      </div>
+
+    </section>
+
+
+    <!-- ============================================= -->
+    <!-- TAB 4: PAYMENTS                               -->
+    <!-- Tingin lang, hindi pwedeng mag-edit           -->
+    <!-- ============================================= -->
+    <section data-staff-panel="payments" class="staff-panel" hidden>
+
+      <div class="panel">
+        <h2>Payment report</h2>
+        <p class="muted">Read-only payment summary. Updates are limited to Finance Officers and Administrators.</p>
+
+        <!-- Table ng mga bayad -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tracking</th>
+                <th>Recipient</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <!-- Dito ilalagay ng JS ang mga row -->
+            <tbody id="paymentRows"></tbody>
+          </table>
+        </div>
+
+        <!-- Lalabas lang kapag wala pang bayad na naka-save -->
+        <p id="emptyPayments" class="muted" hidden>No payment records yet.</p>
+      </div>
+
+    </section>
+
+
+    <!-- ============================================= -->
+    <!-- TAB 5: INCIDENTS & COMPLAINTS                 -->
+    <!-- Listahan ng mga problema at reklamo           -->
+    <!-- ============================================= -->
+    <section data-staff-panel="cases" class="staff-panel" hidden>
+
+      <div class="panel">
+        <h2>Incidents &amp; complaints</h2>
+
+        <!-- Table ng mga kaso -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Tracking</th>
+                <th>Issue</th>
+                <th>Status</th>
+                <th>Reported</th>
+              </tr>
+            </thead>
+
+            <!-- Dito ilalagay ng JS ang mga row -->
+            <tbody id="caseRows"></tbody>
+          </table>
+        </div>
+
+        <!-- Lalabas lang kapag walang kaso -->
+        <p id="emptyCases" class="muted" hidden>No incidents or complaints to show.</p>
+      </div>
+
+    </section>
+
+
+    <!-- ============================================= -->
+    <!-- TAB 6: ADMINISTRATION                         -->
+    <!-- Bawal sa Manager, kaya mensahe lang           -->
+    <!-- ============================================= -->
+    <section data-staff-panel="admin" class="staff-panel" hidden>
+      <div class="panel">
+        <h2>Administration</h2>
+        <p class="muted">System administration is restricted to administrators.</p>
+      </div>
+    </section>
+
   </main>
-  <!-- Modal dialog populated with immutable shipment tracking events. -->
-  <dialog id="trackingDialog"><h2 id="trackingTitle">Tracking history</h2><div id="trackingDetails"></div><button class="btn secondary" id="closeTracking" type="button">Close</button></dialog>
-  <!-- Supabase SDK loads before the connection, authentication helpers, and shared staff logic. -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><script src="../js/supabaseClient.js"></script><script src="../js/auth.js"></script><script src="../js/staff.js"></script>
+
+
+  <!-- ============================================= -->
+  <!-- POP-UP: Tracking history                      -->
+  <!-- Lalabas kapag pinindot ang button sa Actions  -->
+  <!-- ============================================= -->
+  <dialog id="trackingDialog">
+    <h2 id="trackingTitle">Tracking history</h2>
+
+    <!-- Dito ilalagay ng JS ang mga tracking event -->
+    <div id="trackingDetails"></div>
+
+    <button class="btn secondary" id="closeTracking" type="button">Close</button>
+  </dialog>
+
+
+  <!-- ============================================= -->
+  <!-- MGA JS FILE (dapat ganito ang pagkakasunod)   -->
+  <!-- ============================================= -->
+
+  <!-- 1. Supabase (ang database) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+
+  <!-- 2. Koneksyon sa Supabase -->
+  <script src="../js/supabaseClient.js"></script>
+
+  <!-- 3. Login at pag-check ng role -->
+  <script src="../js/auth.js"></script>
+
+  <!-- 4. Gumagana ng mga tab, table, at form -->
+  <script src="../js/staff.js"></script>
+
 </body>
 </html>

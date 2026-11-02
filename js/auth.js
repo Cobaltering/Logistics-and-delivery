@@ -1,14 +1,14 @@
-/* =====================================================================
-   auth.js
-   PURPOSE: everything about "who is logged in and where do they belong".
-   Load order in every page:  Supabase CDN -> supabaseClient.js -> auth.js
+// auth.js - login, logout, proteksyon ng page, at maliliit na tulong na gamit ng lahat ng page
+// Pagkakasunod ng script sa bawat page: Supabase CDN -> supabaseClient.js -> auth.js
+//
+// PAALALA: Taga-redirect lang ang page guard (para sa ginhawa).
+// Ang TOTOONG seguridad ay ang RLS policies sa database.
 
-   REMINDER: the page guard below is only a CONVENIENCE (it redirects
-   people to the right place). The REAL protection is the RLS policies
-   in the database.
-   ===================================================================== */
 
-/* ---------- 1. WHERE EACH ROLE LANDS AFTER LOGIN ---------- */
+// =====================================================
+// 1. HOME PAGE NG BAWAT ROLE
+// Dito pupunta ang bawat role pagkatapos mag-login. Dito magdagdag o magpalit ng role.
+// =====================================================
 const ROLE_HOME = {
   'Customer':           'customer/dashboard.html',
   'Delivery Rider':     'rider/dashboard.html',
@@ -19,23 +19,30 @@ const ROLE_HOME = {
   'Administrator':      'administrator/dashboard.html'
 };
 
-/* ---------- 2. PATH HELPER ----------
-   Pages in sub-folders need "../" to reach the site root.
-   Each page declares it: <body data-root="../"> (or "./" for root pages). */
+
+// =====================================================
+// 2. TULONG SA PATH
+// Ang mga page na nasa loob ng folder ay kailangan ng "../" para makabalik sa main folder.
+// Nilalagay ito sa body tag ng page: <body data-root="../">
+// =====================================================
 function root() {
   return document.body.dataset.root || './';
 }
 
-/* ---------- 3. GET THE LOGGED-IN USER'S PROFILE ----------
-   Returns { user_id, full_name, email, role_name } or null if not
-   logged in / account not active. */
+
+// =====================================================
+// 3. KUNIN ANG USER NA NAKA-LOGIN
+// Ibabalik ang { user_id, full_name, email, role_name }
+// o null kung hindi naka-login / hindi active ang account.
+// =====================================================
 async function getProfile() {
-  // 3a. Is there a valid session (logged in)?
+
+  // May naka-login ba?
   const { data: sessionData } = await sb.auth.getSession();
   const session = sessionData.session;
   if (!session) return null;
 
-  // 3b. Read the profile row (RLS lets users read only their own row)
+  // Kunin ang row ng user sa users table
   const { data, error } = await sb
     .from('users')
     .select('user_id, full_name, email, status, roles(role_name)')
@@ -43,7 +50,7 @@ async function getProfile() {
     .single();
   if (error || !data) return null;
 
-  // 3c. Account Management Policy: inactive/locked accounts cannot enter
+  // Bawal pumasok ang inactive o locked na account
   if (data.status !== 'active') {
     await sb.auth.signOut();
     return null;
@@ -57,68 +64,101 @@ async function getProfile() {
   };
 }
 
-/* ---------- 4. PAGE GUARD ----------
-   Call at the top of every protected page:
-      const me = await requireRole(['Customer']);
-   - not logged in      -> sent to login.html
-   - wrong role         -> sent to their own dashboard
-   - allowed            -> page becomes visible, returns the profile */
+
+// =====================================================
+// 4. PAGE GUARD (BANTAY NG PAGE)
+// Ilagay sa taas ng bawat protektadong page:
+//    const me = await requireRole(['Customer']);
+// Hindi naka-login -> login page
+// Maling role      -> sarili nilang dashboard
+// Tama             -> ipapakita ang page at ibabalik ang user
+// =====================================================
 async function requireRole(allowedRoles) {
   const me = await getProfile();
+
   if (!me) {
     location.replace(root() + 'login.html');
     return null;
   }
+
   if (!allowedRoles.includes(me.role_name)) {
     location.replace(root() + ROLE_HOME[me.role_name]);
     return null;
   }
-  document.body.classList.remove('guarded');   // un-hide the page
+
+  document.body.classList.remove('guarded');   // ipakita ang page
   return me;
 }
 
-/* ---------- 5. LOGIN ----------
-   Returns { ok: true, role } or { ok: false, message } */
+
+// =====================================================
+// 5. LOGIN
+// Ibabalik ang { ok: true, role } o { ok: false, message }
+// =====================================================
 async function loginUser(email, password) {
   const { error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) return { ok: false, message: 'Incorrect email or password.' };
+  if (error) {
+    return { ok: false, message: 'Incorrect email or password.' };
+  }
 
   const me = await getProfile();
-  if (!me) return { ok: false, message: 'This account is inactive or locked. Contact an administrator.' };
+  if (!me) {
+    return { ok: false, message: 'This account is inactive or locked. Contact an administrator.' };
+  }
+
   return { ok: true, role: me.role_name };
 }
 
-/* ---------- 6. LOGOUT ---------- */
+
+// =====================================================
+// 6. LOGOUT
+// =====================================================
 async function logoutUser() {
   await sb.auth.signOut();
   location.replace(root() + 'login.html');
 }
 
-/* ---------- 7. CUSTOMER REGISTRATION ----------
-   The extra info goes into user metadata; the database trigger
-   `handle_new_user` copies it into users + customers tables.
-   NOTE: the role is NOT sent from here, self-signups are always Customer. */
+
+// =====================================================
+// 7. REGISTER NG CUSTOMER
+// Lahat ng nag-sign up ay "Customer". Ang database na ang kokopya
+// ng dagdag na info sa users at customers table.
+// =====================================================
 async function registerCustomer({ full_name, contact_no, address, email, password }) {
   const { data, error } = await sb.auth.signUp({
     email,
     password,
     options: { data: { full_name, contact_no, address } }
   });
-  if (error) return { ok: false, message: error.message };
-  // data.session is null when "Confirm email" is enabled in Supabase
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  // Kapag walang session, kailangan munang i-confirm ng user ang email
   return { ok: true, needsConfirmation: !data.session };
 }
 
-/* ---------- EMAIL OTP RESEND COOLDOWN ----------
-   Limits resend buttons in the browser; Supabase Auth rate limits still apply. */
+
+// =====================================================
+// 8. HINTAY BAGO MAKAPAG-RESEND
+// Dini-disable ang button at nagbibilang pababa (60 segundo kung walang ibang bigay).
+// =====================================================
 function startResendCooldown(button, label, seconds = 60) {
-  if (button._resendCooldownTimer) clearInterval(button._resendCooldownTimer);
+
+  // Itigil muna ang bilang na tumatakbo pa sa button na ito
+  if (button._resendCooldownTimer) {
+    clearInterval(button._resendCooldownTimer);
+  }
 
   let remaining = seconds;
   button.disabled = true;
   button.textContent = `${label} (${remaining}s)`;
+
   button._resendCooldownTimer = setInterval(() => {
     remaining--;
+
+    // Tapos na ang oras: buksan ulit ang button
     if (remaining <= 0) {
       clearInterval(button._resendCooldownTimer);
       button._resendCooldownTimer = null;
@@ -126,35 +166,45 @@ function startResendCooldown(button, label, seconds = 60) {
       button.textContent = label;
       return;
     }
+
     button.textContent = `${label} (${remaining}s)`;
   }, 1000);
 }
 
-/* ---------- 8. PASSWORD POLICY CHECK (client side) ----------
-   The server (Supabase Auth > Password settings) should enforce the same rule too. */
+
+// =====================================================
+// 9. MGA RULE NG PASSWORD
+// =====================================================
+
+// Sinusuri ang bawat rule. Ibabalik ang true/false sa bawat isa.
 function passwordRequirementStatus(pw) {
   return {
-    length: pw.length >= 8 && pw.length <= 20,
+    length:    pw.length >= 8 && pw.length <= 20,
     uppercase: /[A-Z]/.test(pw),
     lowercase: /[a-z]/.test(pw),
-    number: /[0-9]/.test(pw),
-    symbol: /[^A-Za-z0-9]/.test(pw)
+    number:    /[0-9]/.test(pw),
+    symbol:    /[^A-Za-z0-9]/.test(pw)
   };
 }
 
+// Nilalagyan ng tsek ang mga rule sa listahan sa page
 function updatePasswordRequirements(pw, container) {
   const status = passwordRequirementStatus(pw);
+
   container.querySelectorAll('[data-password-rule]').forEach(item => {
     const met = status[item.dataset.passwordRule];
-    item.classList.toggle('met', met);
     const label = item.textContent.replace('✓', '').trim();
+
+    item.classList.toggle('met', met);
     item.setAttribute('aria-label', `${label}: ${met ? 'met' : 'not met'}`);
     item.querySelector('span').textContent = met ? '✓' : '';
   });
 }
 
+// Ibabalik ang unang problema bilang text, o null kung ayos ang password
 function passwordProblem(pw) {
   const status = passwordRequirementStatus(pw);
+
   if (!status.length)    return 'Password must be 8 to 20 characters.';
   if (!status.uppercase) return 'Add a capital letter (A to Z).';
   if (!status.lowercase) return 'Add a lowercase letter (a to z).';
@@ -163,38 +213,51 @@ function passwordProblem(pw) {
   return null;
 }
 
-/* ---------- 9. XSS PROTECTION ----------
-   ALWAYS wrap user-supplied text in esc() before putting it into innerHTML. */
+
+// =====================================================
+// 10. LIGTAS NA TEXT (proteksyon laban sa XSS)
+// LAGING gamitin ang esc() sa text ng user bago ilagay sa innerHTML.
+// =====================================================
 function esc(value) {
   return String(value ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-/* ---------- 10. SMALL UI HELPERS ---------- */
 
-// "Out for Delivery" -> <span class="pill st-out-for-delivery">Out for Delivery</span>
+// =====================================================
+// 11. MALILIIT NA TULONG SA DISPLAY
+// =====================================================
+
+// Badge ng status. "Out for Delivery" -> <span class="pill st-out-for-delivery">
 function statusPill(status) {
   const cls = 'st-' + String(status).toLowerCase().replace(/\s+/g, '-');
   return `<span class="pill ${cls}">${esc(status)}</span>`;
 }
 
+// Petsa bilang text. Halimbawa: "Nov 2, 2026, 3:30 PM"
 function formatDate(iso) {
   if (!iso) return '-';
   return new Date(iso).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-// Shows a message in an element: showMsg(el, 'Saved', 'ok') or 'error'
+// Nagpapakita ng mensahe sa isang element. type = 'ok' o 'error'
 function showMsg(el, text, type) {
   el.textContent = text;
   el.className = 'msg ' + (type || '');
   el.hidden = !text;
 }
 
-// Renders a vertical route-style timeline from tracking events (oldest first)
+// Timeline ng tracking (pinakaluma ang una)
 function renderTimeline(events) {
-  if (!events.length) return '<p class="muted">No tracking events yet.</p>';
-  return '<ol class="timeline">' + events.map(event => `
+  if (!events.length) {
+    return '<p class="muted">No tracking events yet.</p>';
+  }
+
+  const items = events.map(event => `
     <li>
       <div class="tl-head">
         <strong>${esc(event.status)}</strong>
@@ -203,5 +266,7 @@ function renderTimeline(events) {
       ${event.location ? `<p>${esc(event.location)}</p>` : ''}
       ${event.notes ? `<p>${esc(event.notes)}</p>` : ''}
     </li>
-  `).join('') + '</ol>';
+  `).join('');
+
+  return '<ol class="timeline">' + items + '</ol>';
 }

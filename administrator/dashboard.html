@@ -1,45 +1,368 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Administration - Logistics &amp; Delivery</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
-  <link rel="stylesheet" href="../css/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Administration - Logistics &amp; Delivery</title>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../css/styles.css">
 </head>
-<!-- Role-protected admin page: data-role must match the user's Supabase role. -->
+
+<!--
+    data-root="../"            : nasa loob ng folder ang page na ito
+    data-role="Administrator"  : role na pwedeng pumasok (dapat kapareho ng role sa Supabase)
+-->
 <body class="guarded staff-page" data-root="../" data-role="Administrator">
-  <!-- Header shows the authenticated administrator and provides sign-out. -->
-  <header class="topbar"><a class="brand" href="../index.html">Logistics &amp; Delivery</a><div class="who"><span id="userName"></span><button class="btn small secondary" id="logoutBtn" type="button">Sign out</button></div></header>
-  <main>
-    <section class="page-heading"><div><p class="eyebrow">SYSTEM CONTROL</p><h1>Administration</h1><p class="muted">Manage accounts, warehouse routing, and system activity.</p></div><button class="btn secondary" id="refreshBtn" type="button">Refresh data</button></section>
-    <p id="staffNotice" class="msg" hidden></p>
-    <!-- Tabs and matching data-staff-panel sections are shown according to the user's role. -->
-    <nav class="tabs" id="staffTabs" aria-label="Staff dashboard sections">
-      <button type="button" data-tab="overview" aria-selected="true">Overview</button><button type="button" data-tab="shipments" aria-selected="false">Shipments</button><button type="button" data-tab="assignments" aria-selected="false">Assignments</button><button type="button" data-tab="payments" aria-selected="false">Payments</button><button type="button" data-tab="cases" aria-selected="false">Incidents &amp; complaints</button><button type="button" data-tab="admin" aria-selected="false">Administration</button>
-    </nav>
-    <section data-staff-panel="overview" class="staff-panel"><div id="stats" class="stats-grid"></div><div class="panel"><h2>Security reminders</h2><ul class="check-list"><li>Grant each account only the permissions required for its duties.</li><li>Review incidents and audit account or shipment changes.</li><li>Do not share service-role credentials with browser code.</li></ul></div></section>
-    <section data-staff-panel="shipments" class="staff-panel" hidden><div class="panel"><div class="panel-heading"><div><h2>All shipments</h2><p class="muted">View shipment records and immutable tracking history.</p></div><label class="search-field"><span class="sr-only">Search shipments</span><input id="shipmentSearch" type="search" placeholder="Search tracking or recipient"></label></div><div class="table-wrap"><table><thead><tr><th>Tracking number</th><th>Recipient</th><th>Status</th><th>Booked</th><th>Actions</th></tr></thead><tbody id="shipmentRows"></tbody></table></div><p id="emptyShipments" class="muted" hidden>No shipments match your search.</p></div></section>
-    <section data-staff-panel="assignments" class="staff-panel" hidden><div class="panel"><h2>Assign a delivery rider</h2><form id="assignForm"><label for="assignmentShipment">Shipment</label><select id="assignmentShipment" required></select><label for="assignmentRider">Rider</label><select id="assignmentRider" required></select><button class="btn" id="assignBtn" type="submit">Assign rider</button><p id="assignmentMsg" class="msg" hidden></p></form></div></section>
-    <section data-staff-panel="payments" class="staff-panel" hidden>
-      <div class="panel"><h2>Record payment</h2><form id="paymentForm" class="form-grid">
-        <div><label for="paymentShipment">Shipment</label><select id="paymentShipment" required></select></div><div><label for="paymentAmount">Amount (PHP)</label><input id="paymentAmount" type="number" min="0" step="0.01" required></div>
-        <div><label for="paymentMethod">Payment method</label><select id="paymentMethod"><option>Cash</option><option>GCash</option><option>Card</option><option>Bank Transfer</option></select></div><div><label for="paymentStatus">Status</label><select id="paymentStatus"><option>Pending</option><option>Paid</option><option>Refunded</option></select></div>
-        <div class="form-wide"><button class="btn" id="paymentBtn" type="submit">Save payment</button><p id="paymentMsg" class="msg" hidden></p></div>
-      </form></div>
-      <div class="panel"><h2>Payment records</h2><div class="table-wrap"><table><thead><tr><th>Tracking</th><th>Recipient</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody id="paymentRows"></tbody></table></div><p id="emptyPayments" class="muted" hidden>No payment records yet.</p></div>
-    </section>
-    <section data-staff-panel="cases" class="staff-panel" hidden><div class="panel"><h2>Incidents &amp; complaints</h2><div class="table-wrap"><table><thead><tr><th>Type</th><th>Tracking</th><th>Issue</th><th>Status</th><th>Reported</th></tr></thead><tbody id="caseRows"></tbody></table></div><p id="emptyCases" class="muted" hidden>No incidents or complaints to show.</p></div></section>
-    <section data-staff-panel="admin" class="staff-panel" hidden>
-      <div class="panel"><h2>Add warehouse</h2><form id="warehouseCreateForm" class="form-grid"><div><label for="warehouseName">Warehouse name</label><input id="warehouseName" maxlength="100" required></div><div><label for="warehouseAddress">Address</label><input id="warehouseAddress" maxlength="250" required></div><div class="form-wide"><button class="btn" type="submit">Add warehouse</button><p id="warehouseCreateMsg" class="msg" hidden></p></div></form></div>
-      <div class="panel"><h2>Assign warehouse to shipment</h2><p class="muted">This determines which warehouse staff can access the shipment.</p><form id="warehouseAssignForm" class="form-grid"><div><label for="warehouseShipment">Shipment</label><select id="warehouseShipment" required></select></div><div><label for="warehouseAssign">Warehouse</label><select id="warehouseAssign" required></select></div><div class="form-wide"><button class="btn" type="submit">Assign warehouse</button><p id="warehouseMsg" class="msg" hidden></p></div></form></div>
-      <div class="panel"><h2>User accounts</h2><p class="muted">Staff accounts must first be created in Supabase Authentication. Change their role, warehouse, or status here. Assigning the Delivery Rider role creates a rider profile.</p><div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Warehouse</th><th>Account status</th><th></th></tr></thead><tbody id="adminUsers"></tbody></table></div></div>
-      <div class="panel"><h2>Audit log</h2><p class="muted">Recent inserts, updates, and deletes on tracked records.</p><div class="table-wrap"><table><thead><tr><th>When</th><th>Action</th><th>Table</th><th>Record</th></tr></thead><tbody id="auditRows"></tbody></table></div><p id="emptyAudit" class="muted" hidden>No audit events yet.</p></div>
-    </section>
-  </main>
-  <!-- Modal dialog populated with immutable shipment tracking events. -->
-  <dialog id="trackingDialog"><h2 id="trackingTitle">Tracking history</h2><div id="trackingDetails"></div><button class="btn secondary" id="closeTracking" type="button">Close</button></dialog>
-  <!-- Supabase SDK loads before the connection, authentication helpers, and shared staff logic. -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><script src="../js/supabaseClient.js"></script><script src="../js/auth.js"></script><script src="../js/staff.js"></script>
+
+
+    <!-- ================= TAAS NA BAR ================= -->
+    <header class="topbar">
+
+        <a class="brand" href="../index.html">Logistics &amp; Delivery</a>
+
+        <div class="who">
+            <span id="userName"></span>
+            <button class="btn small secondary" id="logoutBtn" type="button">Sign out</button>
+        </div>
+
+    </header>
+
+
+    <main>
+
+        <!-- ================= PAMAGAT NG PAGE ================= -->
+        <section class="page-heading">
+            <div>
+                <p class="eyebrow">SYSTEM CONTROL</p>
+                <h1>Administration</h1>
+                <p class="muted">Manage accounts, warehouse routing, and system activity.</p>
+            </div>
+            <button class="btn secondary" id="refreshBtn" type="button">Refresh data</button>
+        </section>
+
+        <!-- Dito lalabas ang mensahe (tama o error) -->
+        <p id="staffNotice" class="msg" hidden></p>
+
+
+        <!-- ================= MGA TAB =================
+             Ang bawat tab ay may kapareha sa ibaba na section na may
+             parehong pangalan (data-tab = data-staff-panel). -->
+        <nav class="tabs" id="staffTabs" aria-label="Staff dashboard sections">
+            <button type="button" data-tab="overview" aria-selected="true">Overview</button>
+            <button type="button" data-tab="shipments" aria-selected="false">Shipments</button>
+            <button type="button" data-tab="assignments" aria-selected="false">Assignments</button>
+            <button type="button" data-tab="payments" aria-selected="false">Payments</button>
+            <button type="button" data-tab="cases" aria-selected="false">Incidents &amp; complaints</button>
+            <button type="button" data-tab="admin" aria-selected="false">Administration</button>
+        </nav>
+
+
+        <!-- ================= TAB 1: OVERVIEW ================= -->
+        <section data-staff-panel="overview" class="staff-panel">
+
+            <!-- Mga bilang (nilalagay ng staff.js) -->
+            <div id="stats" class="stats-grid"></div>
+
+            <div class="panel">
+                <h2>Security reminders</h2>
+                <ul class="check-list">
+                    <li>Grant each account only the permissions required for its duties.</li>
+                    <li>Review incidents and audit account or shipment changes.</li>
+                    <li>Do not share service-role credentials with browser code.</li>
+                </ul>
+            </div>
+
+        </section>
+
+
+        <!-- ================= TAB 2: SHIPMENTS ================= -->
+        <section data-staff-panel="shipments" class="staff-panel" hidden>
+            <div class="panel">
+
+                <div class="panel-heading">
+                    <div>
+                        <h2>All shipments</h2>
+                        <p class="muted">View shipment records and immutable tracking history.</p>
+                    </div>
+
+                    <!-- Paghahanap -->
+                    <label class="search-field">
+                        <span class="sr-only">Search shipments</span>
+                        <input id="shipmentSearch" type="search" placeholder="Search tracking or recipient">
+                    </label>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tracking number</th>
+                                <th>Recipient</th>
+                                <th>Status</th>
+                                <th>Booked</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shipmentRows"></tbody>
+                    </table>
+                </div>
+
+                <p id="emptyShipments" class="muted" hidden>No shipments match your search.</p>
+
+            </div>
+        </section>
+
+
+        <!-- ================= TAB 3: ASSIGNMENTS ================= -->
+        <section data-staff-panel="assignments" class="staff-panel" hidden>
+            <div class="panel">
+
+                <h2>Assign a delivery rider</h2>
+
+                <form id="assignForm">
+
+                    <label for="assignmentShipment">Shipment</label>
+                    <select id="assignmentShipment" required></select>
+
+                    <label for="assignmentRider">Rider</label>
+                    <select id="assignmentRider" required></select>
+
+                    <button class="btn" id="assignBtn" type="submit">Assign rider</button>
+                    <p id="assignmentMsg" class="msg" hidden></p>
+
+                </form>
+
+            </div>
+        </section>
+
+
+        <!-- ================= TAB 4: PAYMENTS ================= -->
+        <section data-staff-panel="payments" class="staff-panel" hidden>
+
+            <!-- Magdagdag ng bayad -->
+            <div class="panel">
+
+                <h2>Record payment</h2>
+
+                <form id="paymentForm" class="form-grid">
+
+                    <div>
+                        <label for="paymentShipment">Shipment</label>
+                        <select id="paymentShipment" required></select>
+                    </div>
+
+                    <div>
+                        <label for="paymentAmount">Amount (PHP)</label>
+                        <input id="paymentAmount" type="number" min="0" step="0.01" required>
+                    </div>
+
+                    <div>
+                        <label for="paymentMethod">Payment method</label>
+                        <select id="paymentMethod">
+                            <option>Cash</option>
+                            <option>GCash</option>
+                            <option>Card</option>
+                            <option>Bank Transfer</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="paymentStatus">Status</label>
+                        <select id="paymentStatus">
+                            <option>Pending</option>
+                            <option>Paid</option>
+                            <option>Refunded</option>
+                        </select>
+                    </div>
+
+                    <div class="form-wide">
+                        <button class="btn" id="paymentBtn" type="submit">Save payment</button>
+                        <p id="paymentMsg" class="msg" hidden></p>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <!-- Listahan ng mga bayad -->
+            <div class="panel">
+
+                <h2>Payment records</h2>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tracking</th>
+                                <th>Recipient</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentRows"></tbody>
+                    </table>
+                </div>
+
+                <p id="emptyPayments" class="muted" hidden>No payment records yet.</p>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= TAB 5: INCIDENTS AT COMPLAINTS ================= -->
+        <section data-staff-panel="cases" class="staff-panel" hidden>
+            <div class="panel">
+
+                <h2>Incidents &amp; complaints</h2>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Tracking</th>
+                                <th>Issue</th>
+                                <th>Status</th>
+                                <th>Reported</th>
+                            </tr>
+                        </thead>
+                        <tbody id="caseRows"></tbody>
+                    </table>
+                </div>
+
+                <p id="emptyCases" class="muted" hidden>No incidents or complaints to show.</p>
+
+            </div>
+        </section>
+
+
+        <!-- ================= TAB 6: ADMINISTRATION ================= -->
+        <section data-staff-panel="admin" class="staff-panel" hidden>
+
+            <!-- Magdagdag ng warehouse -->
+            <div class="panel">
+
+                <h2>Add warehouse</h2>
+
+                <form id="warehouseCreateForm" class="form-grid">
+
+                    <div>
+                        <label for="warehouseName">Warehouse name</label>
+                        <input id="warehouseName" maxlength="100" required>
+                    </div>
+
+                    <div>
+                        <label for="warehouseAddress">Address</label>
+                        <input id="warehouseAddress" maxlength="250" required>
+                    </div>
+
+                    <div class="form-wide">
+                        <button class="btn" type="submit">Add warehouse</button>
+                        <p id="warehouseCreateMsg" class="msg" hidden></p>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <!-- I-assign ang warehouse sa shipment -->
+            <div class="panel">
+
+                <h2>Assign warehouse to shipment</h2>
+                <p class="muted">This determines which warehouse staff can access the shipment.</p>
+
+                <form id="warehouseAssignForm" class="form-grid">
+
+                    <div>
+                        <label for="warehouseShipment">Shipment</label>
+                        <select id="warehouseShipment" required></select>
+                    </div>
+
+                    <div>
+                        <label for="warehouseAssign">Warehouse</label>
+                        <select id="warehouseAssign" required></select>
+                    </div>
+
+                    <div class="form-wide">
+                        <button class="btn" type="submit">Assign warehouse</button>
+                        <p id="warehouseMsg" class="msg" hidden></p>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <!-- Mga account ng user -->
+            <div class="panel">
+
+                <h2>User accounts</h2>
+                <p class="muted">Staff accounts must first be created in Supabase Authentication. Change their role, warehouse, or status here. Assigning the Delivery Rider role creates a rider profile.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Warehouse</th>
+                                <th>Account status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUsers"></tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- Audit log (talaan ng mga pagbabago) -->
+            <div class="panel">
+
+                <h2>Audit log</h2>
+                <p class="muted">Recent inserts, updates, and deletes on tracked records.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>When</th>
+                                <th>Action</th>
+                                <th>Table</th>
+                                <th>Record</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditRows"></tbody>
+                    </table>
+                </div>
+
+                <p id="emptyAudit" class="muted" hidden>No audit events yet.</p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- ================= POPUP: TRACKING HISTORY ================= -->
+    <dialog id="trackingDialog">
+        <h2 id="trackingTitle">Tracking history</h2>
+        <div id="trackingDetails"></div>
+        <button class="btn secondary" id="closeTracking" type="button">Close</button>
+    </dialog>
+
+
+    <!-- ================= MGA SCRIPT (huwag baguhin ang pagkakasunod-sunod) ================= -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    <script src="../js/supabaseClient.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/staff.js"></script>
+
 </body>
+
 </html>

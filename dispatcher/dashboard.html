@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+
+<!-- ================= HEAD ================= -->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,27 +9,173 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
   <link rel="stylesheet" href="../css/styles.css">
 </head>
-<!-- Role-protected dispatcher dashboard: data-role must match the user's Supabase role. -->
+
+<!-- data-role dapat tugma sa role ng user sa Supabase. Dito nakadepende ang js/staff.js -->
 <body class="guarded staff-page" data-root="../" data-role="Dispatcher">
-  <!-- Header shows the authenticated dispatcher and provides sign-out. -->
-  <header class="topbar"><a class="brand" href="../index.html">Logistics &amp; Delivery</a><div class="who"><span id="userName"></span><button class="btn small secondary" id="logoutBtn" type="button">Sign out</button></div></header>
+
+  <!-- ================= TOP BAR: logo, pangalan, Sign out ================= -->
+  <header class="topbar">
+    <a class="brand" href="../index.html">Logistics &amp; Delivery</a>
+    <div class="who">
+      <span id="userName"></span>
+      <button class="btn small secondary" id="logoutBtn" type="button">Sign out</button>
+    </div>
+  </header>
+
   <main>
-    <section class="page-heading"><div><p class="eyebrow">OPERATIONS</p><h1>Dispatch center</h1><p class="muted">Coordinate assignments and keep shipment events up to date.</p></div><button class="btn secondary" id="refreshBtn" type="button">Refresh data</button></section>
+
+    <!-- ================= PAMAGAT NG PAGE ================= -->
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">OPERATIONS</p>
+        <h1>Dispatch center</h1>
+        <p class="muted">Coordinate assignments and keep shipment events up to date.</p>
+      </div>
+      <button class="btn secondary" id="refreshBtn" type="button">Refresh data</button>
+    </section>
+
+    <!-- Mensahe (error o success) -->
     <p id="staffNotice" class="msg" hidden></p>
-    <!-- Tabs and matching data-staff-panel sections expose the dispatch tools. -->
+
+    <!-- ================= MGA TAB ================= -->
+    <!-- Ang staff.js ang magtatago ng mga tab na hindi para sa Dispatcher -->
     <nav class="tabs" id="staffTabs" aria-label="Staff dashboard sections">
-      <button type="button" data-tab="overview" aria-selected="true">Overview</button><button type="button" data-tab="shipments" aria-selected="false">Shipments</button><button type="button" data-tab="assignments" aria-selected="false">Assignments</button><button type="button" data-tab="payments" aria-selected="false">Payments</button><button type="button" data-tab="cases" aria-selected="false">Incidents &amp; complaints</button><button type="button" data-tab="admin" aria-selected="false">Administration</button>
+      <button type="button" data-tab="overview"    aria-selected="true">Overview</button>
+      <button type="button" data-tab="shipments"   aria-selected="false">Shipments</button>
+      <button type="button" data-tab="assignments" aria-selected="false">Assignments</button>
+      <button type="button" data-tab="payments"    aria-selected="false">Payments</button>
+      <button type="button" data-tab="cases"       aria-selected="false">Incidents &amp; complaints</button>
+      <button type="button" data-tab="admin"       aria-selected="false">Administration</button>
     </nav>
-    <section data-staff-panel="overview" class="staff-panel"><div id="stats" class="stats-grid"></div><div class="panel"><h2>Dispatch priorities</h2><ul class="check-list"><li>Assign active shipments to available delivery riders.</li><li>Review failed deliveries and customer complaints.</li><li>Keep tracking events current and report suspicious shipments.</li></ul></div></section>
-    <section data-staff-panel="shipments" class="staff-panel" hidden><div class="panel"><div class="panel-heading"><div><h2>All shipments</h2><p class="muted">Search a shipment, inspect its tracking history, or start an assignment.</p></div><label class="search-field"><span class="sr-only">Search shipments</span><input id="shipmentSearch" type="search" placeholder="Search tracking or recipient"></label></div><div class="table-wrap"><table><thead><tr><th>Tracking number</th><th>Recipient</th><th>Status</th><th>Booked</th><th>Actions</th></tr></thead><tbody id="shipmentRows"></tbody></table></div><p id="emptyShipments" class="muted" hidden>No shipments match your search.</p></div></section>
-    <section data-staff-panel="assignments" class="staff-panel" hidden><div class="panel"><h2>Assign a delivery rider</h2><p class="muted">Reassigning a shipment closes its previous active assignment.</p><form id="assignForm"><label for="assignmentShipment">Shipment</label><select id="assignmentShipment" required></select><label for="assignmentRider">Rider</label><select id="assignmentRider" required></select><button class="btn" id="assignBtn" type="submit">Assign rider</button><p id="assignmentMsg" class="msg" hidden></p></form></div></section>
-    <section data-staff-panel="payments" class="staff-panel" hidden><div class="panel"><h2>Payments</h2><p class="muted">Payment records are restricted to Finance and Administration.</p></div></section>
-    <section data-staff-panel="cases" class="staff-panel" hidden><div class="panel"><h2>Incidents &amp; complaints</h2><div class="table-wrap"><table><thead><tr><th>Type</th><th>Tracking</th><th>Issue</th><th>Status</th><th>Reported</th></tr></thead><tbody id="caseRows"></tbody></table></div><p id="emptyCases" class="muted" hidden>No incidents or complaints to show.</p></div></section>
-    <section data-staff-panel="admin" class="staff-panel" hidden><div class="panel"><h2>Administration</h2><p class="muted">System administration is restricted to administrators.</p></div></section>
+
+    <!-- ================= TAB: OVERVIEW ================= -->
+    <section data-staff-panel="overview" class="staff-panel">
+
+      <!-- Mga bilang (nilalagay ng staff.js) -->
+      <div id="stats" class="stats-grid"></div>
+
+      <!-- Mga dapat gawin -->
+      <div class="panel">
+        <h2>Dispatch priorities</h2>
+        <ul class="check-list">
+          <li>Assign active shipments to available delivery riders.</li>
+          <li>Review failed deliveries and customer complaints.</li>
+          <li>Keep tracking events current and report suspicious shipments.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= TAB: SHIPMENTS ================= -->
+    <section data-staff-panel="shipments" class="staff-panel" hidden>
+      <div class="panel">
+
+        <!-- Pamagat at search box -->
+        <div class="panel-heading">
+          <div>
+            <h2>All shipments</h2>
+            <p class="muted">Search a shipment, inspect its tracking history, or start an assignment.</p>
+          </div>
+          <label class="search-field">
+            <span class="sr-only">Search shipments</span>
+            <input id="shipmentSearch" type="search" placeholder="Search tracking or recipient">
+          </label>
+        </div>
+
+        <!-- Table ng shipments -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tracking number</th>
+                <th>Recipient</th>
+                <th>Status</th>
+                <th>Booked</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="shipmentRows"></tbody>
+          </table>
+        </div>
+
+        <!-- Lalabas kung walang nahanap -->
+        <p id="emptyShipments" class="muted" hidden>No shipments match your search.</p>
+      </div>
+    </section>
+
+    <!-- ================= TAB: ASSIGNMENTS (pagbigay ng rider) ================= -->
+    <section data-staff-panel="assignments" class="staff-panel" hidden>
+      <div class="panel">
+        <h2>Assign a delivery rider</h2>
+        <p class="muted">Reassigning a shipment closes its previous active assignment.</p>
+
+        <form id="assignForm">
+          <label for="assignmentShipment">Shipment</label>
+          <select id="assignmentShipment" required></select>
+
+          <label for="assignmentRider">Rider</label>
+          <select id="assignmentRider" required></select>
+
+          <button class="btn" id="assignBtn" type="submit">Assign rider</button>
+          <p id="assignmentMsg" class="msg" hidden></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= TAB: PAYMENTS (walang access ang Dispatcher) ================= -->
+    <section data-staff-panel="payments" class="staff-panel" hidden>
+      <div class="panel">
+        <h2>Payments</h2>
+        <p class="muted">Payment records are restricted to Finance and Administration.</p>
+      </div>
+    </section>
+
+    <!-- ================= TAB: INCIDENTS AT COMPLAINTS ================= -->
+    <section data-staff-panel="cases" class="staff-panel" hidden>
+      <div class="panel">
+        <h2>Incidents &amp; complaints</h2>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Tracking</th>
+                <th>Issue</th>
+                <th>Status</th>
+                <th>Reported</th>
+              </tr>
+            </thead>
+            <tbody id="caseRows"></tbody>
+          </table>
+        </div>
+
+        <p id="emptyCases" class="muted" hidden>No incidents or complaints to show.</p>
+      </div>
+    </section>
+
+    <!-- ================= TAB: ADMINISTRATION (walang access ang Dispatcher) ================= -->
+    <section data-staff-panel="admin" class="staff-panel" hidden>
+      <div class="panel">
+        <h2>Administration</h2>
+        <p class="muted">System administration is restricted to administrators.</p>
+      </div>
+    </section>
+
   </main>
-  <!-- Modal dialog populated with immutable shipment tracking events. -->
-  <dialog id="trackingDialog"><h2 id="trackingTitle">Tracking history</h2><div id="trackingDetails"></div><button class="btn secondary" id="closeTracking" type="button">Close</button></dialog>
-  <!-- Supabase SDK loads before the connection, authentication helpers, and shared staff logic. -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><script src="../js/supabaseClient.js"></script><script src="../js/auth.js"></script><script src="../js/staff.js"></script>
+
+  <!-- ================= TRACKING WINDOW (pop-up) ================= -->
+  <!-- Lumalabas kapag pinindot ang "Tracking" button sa table -->
+  <dialog id="trackingDialog">
+    <h2 id="trackingTitle">Tracking history</h2>
+    <div id="trackingDetails"></div>
+    <button class="btn secondary" id="closeTracking" type="button">Close</button>
+  </dialog>
+
+  <!-- ================= MGA SCRIPT (huwag baguhin ang ayos) ================= -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/staff.js"></script>
+
 </body>
 </html>

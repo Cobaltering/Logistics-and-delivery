@@ -1,85 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sign in - Logistics &amp; Delivery</title>
-  <!-- Fonts (optional; falls back to system fonts if offline) -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
-  <link rel="stylesheet" href="css/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in - Logistics &amp; Delivery</title>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
-<!-- data-root tells auth.js how to reach the site root from this page -->
+
+<!-- data-root="./" : sinasabi kay auth.js na nasa main folder ang page na ito -->
 <body data-root="./">
-  <div class="auth-wrap">
-    <div class="auth-card">
-      <div class="brand">Logistics &amp; Delivery</div>
-      <h1>Sign in</h1>
-      <p class="muted">Customers and staff use the same sign-in. You will be taken to your own dashboard.</p>
 
-      <!-- LOGIN FORM: HTML5 validation (required, type=email) = client-side validation -->
-      <form id="loginForm" novalidate>
-        <label for="email">Email</label>
-        <input id="email" type="email" autocomplete="username" required>
+    <div class="auth-wrap">
+        <div class="auth-card">
 
-        <label for="password">Password</label>
-        <input id="password" type="password" autocomplete="current-password" required>
+            <!-- Pamagat -->
+            <div class="brand">Logistics &amp; Delivery</div>
+            <h1>Sign in</h1>
+            <p class="muted">Customers and staff use the same sign-in. You will be taken to your own dashboard.</p>
 
-        <button class="btn full" id="loginBtn" type="submit">Sign in</button>
-        <p id="msg" class="msg" hidden></p>
-      </form>
+            <!-- Form ng login -->
+            <form id="loginForm" novalidate>
 
-      <p class="auth-links"><a href="reset-password.html">Forgot your password?</a></p>
-      <p class="auth-links">New customer? <a href="register.html">Create an account</a></p>
+                <label for="email">Email</label>
+                <input id="email" type="email" autocomplete="username" required>
+
+                <label for="password">Password</label>
+                <input id="password" type="password" autocomplete="current-password" required>
+
+                <button class="btn full" id="loginBtn" type="submit">Sign in</button>
+
+                <!-- Dito lalabas ang error -->
+                <p id="msg" class="msg" hidden></p>
+
+            </form>
+
+            <!-- Mga link -->
+            <p class="auth-links"><a href="reset-password.html">Forgot your password?</a></p>
+            <p class="auth-links">New customer? <a href="register.html">Create an account</a></p>
+
+        </div>
     </div>
-  </div>
 
-  <!-- Script order matters: Supabase library -> connection -> helpers -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/supabaseClient.js"></script>
-  <script src="js/auth.js"></script>
-  <script>
-    const form = document.getElementById('loginForm');
-    const msg  = document.getElementById('msg');
-    const btn  = document.getElementById('loginBtn');
+    <!-- Mga script (huwag baguhin ang pagkakasunod-sunod) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/login.js"></script>
 
-    /* Convenience lockout: after 5 wrong attempts, wait 30 seconds.
-       This only slows down casual guessing in the browser. Real brute-force
-       protection is Supabase's server-side rate limiting (Auth > Rate Limits). */
-    let failedAttempts = 0;
-    let lockedUntil = 0;
-
-    /* If already logged in, skip the form and go straight to the dashboard */
-    (async () => {
-      const me = await getProfile();
-      if (me) location.replace(ROLE_HOME[me.role_name]);
-    })();
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      // Lockout check
-      if (Date.now() < lockedUntil) {
-        const secs = Math.ceil((lockedUntil - Date.now()) / 1000);
-        return showMsg(msg, `Too many attempts. Try again in ${secs} seconds.`, 'error');
-      }
-
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      if (!email || !password) return showMsg(msg, 'Enter your email and password.', 'error');
-
-      btn.disabled = true;
-      const result = await loginUser(email, password);
-      btn.disabled = false;
-
-      if (!result.ok) {
-        failedAttempts++;
-        if (failedAttempts >= 5) { lockedUntil = Date.now() + 30000; failedAttempts = 0; }
-        return showMsg(msg, result.message, 'error');
-      }
-
-      // Success: send each role to its own dashboard
-      location.replace(ROLE_HOME[result.role]);
-    });
-  </script>
 </body>
+
 </html>

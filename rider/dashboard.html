@@ -1,138 +1,278 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My deliveries - Logistics &amp; Delivery</title>
+
+  <!-- Font na gagamitin ng buong page -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+  <!-- Dito galing ang lahat ng kulay at itsura (CSS file) -->
   <link rel="stylesheet" href="../css/styles.css">
 </head>
-<!-- Hidden until requireRole() confirms this is a Delivery Rider -->
+
+
+<!-- Nakatago ang page hangga't hindi kumpirmadong Delivery Rider ang user -->
 <body class="guarded" data-root="../">
 
+
+  <!-- ============================================= -->
+  <!-- HEADER (taas ng page)                         -->
+  <!-- ============================================= -->
   <header class="topbar">
+
     <div class="brand">Logistics &amp; Delivery &middot; Rider</div>
+
     <div class="who">
+      <!-- Dito lalabas ang pangalan ng naka-login (galing sa JS) -->
       <span id="userName"></span>
+
+      <!-- Button para mag-logout -->
       <button class="btn small secondary" id="logoutBtn" type="button">Sign out</button>
     </div>
+
   </header>
 
+
   <main>
+
     <h2>My assigned deliveries</h2>
     <p class="muted">You only see shipments a dispatcher assigned to you.</p>
+
+    <!-- Mensahe sa taas (success o error) -->
     <p id="pageMsg" class="msg" hidden></p>
 
-    <!-- Delivery cards are inserted here by loadJobs() -->
+    <!-- Dito ilalagay ng JS ang mga card ng delivery (tingnan ang loadJobs sa baba) -->
     <div id="jobs"></div>
+
+    <!-- Lalabas lang kapag walang delivery na naka-assign -->
     <p id="emptyJobs" class="muted" hidden>No deliveries assigned right now.</p>
+
   </main>
 
-  <!-- ===== PROOF OF DELIVERY DIALOG =====
-       Proof-of-Delivery Policy: recipient name + proof + timestamp are all required. -->
+
+  <!-- ============================================= -->
+  <!-- POP-UP: PROOF OF DELIVERY                     -->
+  <!-- Lalabas kapag pinindot ang "Delivered".       -->
+  <!-- Kailangan ang pangalan ng tumanggap at proof. -->
+  <!-- ============================================= -->
   <dialog id="deliverDlg">
+
     <form id="deliverForm" method="dialog" novalidate>
+
       <h3>Confirm delivery</h3>
+
+      <!-- Dito lalabas ang tracking number (galing sa JS) -->
       <p class="muted" id="deliverFor"></p>
 
+      <!-- Pangalan ng tumanggap -->
       <label for="proof_recipient">Name of person who received it</label>
       <input id="proof_recipient" required maxlength="100">
 
+      <!-- Proof: link ng litrato o signature -->
+      <!-- Sa ngayon link lang. Pwede nating gawing totoong upload sa Supabase Storage sa susunod -->
       <label for="proof_ref">Proof of delivery</label>
-      <!-- Phase 1: a link or reference (photo URL / signature ref).
-           Later we can upgrade this to a real photo upload with Supabase Storage. -->
       <input id="proof_ref" required maxlength="300" placeholder="Photo link or signature reference">
 
       <p class="muted">Delivery time is recorded automatically.</p>
+
+      <!-- Mga button ng pop-up -->
       <div class="row" style="margin-top:1rem">
         <button class="btn" type="submit" id="confirmDeliverBtn">Mark as delivered</button>
         <button class="btn secondary" type="button" id="cancelDeliver">Cancel</button>
       </div>
+
+      <!-- Mensahe kapag may mali -->
       <p id="deliverMsg" class="msg" hidden></p>
+
     </form>
+
   </dialog>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="../js/supabaseClient.js"></script>
-  <script src="../js/auth.js"></script>
-  <script>
-    /* Rider dashboard: show assigned deliveries, append status events, and capture delivery proof. */
-    let me = null;        // logged-in profile
-    let deliverTarget = null;   // shipment currently being confirmed as delivered
 
-    // Keep available buttons aligned with the permitted shipment status flow.
+  <!-- ============================================= -->
+  <!-- MGA JS FILE (dapat ganito ang pagkakasunod)   -->
+  <!-- ============================================= -->
+
+  <!-- 1. Supabase (ang database) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+
+  <!-- 2. Koneksyon sa Supabase -->
+  <script src="../js/supabaseClient.js"></script>
+
+  <!-- 3. Login at pag-check ng role -->
+  <script src="../js/auth.js"></script>
+
+
+  <!-- ============================================= -->
+  <!-- JS NG RIDER PAGE                              -->
+  <!-- Nagpapakita ng mga delivery, nagbabago ng     -->
+  <!-- status, at kumukuha ng proof of delivery.     -->
+  <!-- ============================================= -->
+  <script>
+
+    /* =========================================================
+       1. MGA VARIABLE
+       ========================================================= */
+
+    // Ang naka-login na rider (nilalagay pag nag-start ang page)
+    let me = null;
+
+    // Ang padala na kino-confirm na delivered (nilalagay pag pinindot ang "Delivered")
+    let deliverTarget = null;
+
+    // Listahan ng pwedeng pindutin na button, depende sa kasalukuyang status.
+    // Halimbawa: kung 'Created' ang status, 'Picked Up' lang ang pwedeng sunod.
+    // Kung gusto mong magdagdag o magbago ng daan ng status, dito mo gawin.
     const RIDER_ACTIONS = {
-      'Created': ['Picked Up'],
-      'Picked Up': ['In Transit'],
-      'In Transit': ['At Warehouse', 'Out for Delivery'],
-      'At Warehouse': ['Out for Delivery'],
+      'Created':          ['Picked Up'],
+      'Picked Up':        ['In Transit'],
+      'In Transit':       ['At Warehouse', 'Out for Delivery'],
+      'At Warehouse':     ['Out for Delivery'],
       'Out for Delivery': ['Failed Delivery', 'Delivered'],
-      'Failed Delivery': ['Out for Delivery']
+      'Failed Delivery':  ['Out for Delivery']
     };
 
-    /* ---------- STARTUP ---------- */
+
+    /* =========================================================
+       2. PAG-START NG PAGE
+       Chine-check kung Delivery Rider ang user.
+       Kapag oo, ipapakita ang pangalan at ilo-load ang mga delivery.
+       ========================================================= */
     (async () => {
+
       me = await requireRole(['Delivery Rider']);
+
+      // Kapag hindi rider, hihinto dito
       if (!me) return;
+
       document.getElementById('userName').textContent = me.full_name;
       document.getElementById('logoutBtn').addEventListener('click', logoutUser);
 
       loadJobs();
+
     })();
 
-    /* ---------- LOAD ASSIGNED DELIVERIES ----------
-       Shipment Access Policy: no filter needed. RLS returns ONLY the
-       assignments (and their shipments) belonging to this rider. */
+
+    /* =========================================================
+       3. KUNIN ANG MGA DELIVERY NG RIDER
+       Hindi na kailangan ng filter dito. Ang database (RLS)
+       na ang nagbibigay ng delivery na naka-assign lang sa rider na ito.
+       ========================================================= */
     async function loadJobs() {
+
+      // Kunin ang data sa Supabase
       const { data, error } = await sb
         .from('delivery_assignments')
         .select('assignment_id, shipments(shipment_id, tracking_no, recipient_name, recipient_contact, pickup_address, delivery_address, status)');
 
-      const box = document.getElementById('jobs');
-      if (error) return showMsg(document.getElementById('pageMsg'), 'Could not load deliveries.', 'error');
+      // Kapag may error, magpakita ng mensahe at hihinto
+      if (error) {
+        return showMsg(document.getElementById('pageMsg'), 'Could not load deliveries.', 'error');
+      }
 
+      // Kunin lang ang mga padala (shipments) sa data
       const jobs = data.map(d => d.shipments).filter(Boolean);
+
+      // Itago ang "No deliveries" kapag may delivery
       document.getElementById('emptyJobs').hidden = jobs.length > 0;
 
-      box.innerHTML = jobs.map(s => {
-        const finished = ['Delivered', 'Lost', 'Suspicious'].includes(s.status);
-        const actions = [...(RIDER_ACTIONS[s.status] || []), ...(finished ? [] : ['Lost', 'Suspicious'])];
-        return `
+      // Gumawa ng card para sa bawat delivery at ilagay sa page
+      document.getElementById('jobs').innerHTML = jobs.map(makeJobCard).join('');
+    }
+
+
+    /* =========================================================
+       4. GUMAWA NG ISANG CARD NG DELIVERY
+       Ito ang itsura ng bawat card. Dito ka mag-edit
+       kung gusto mong baguhin ang laman ng card.
+       ========================================================= */
+    function makeJobCard(s) {
+
+      // Tapos na ba ang padala? (Delivered, Lost, o Suspicious)
+      const finished = ['Delivered', 'Lost', 'Suspicious'].includes(s.status);
+
+      // Mga button na lalabas: yung sunod na status + Lost + Suspicious
+      // (Kapag tapos na, wala nang Lost at Suspicious)
+      const actions = [
+        ...(RIDER_ACTIONS[s.status] || []),
+        ...(finished ? [] : ['Lost', 'Suspicious'])
+      ];
+
+      // Mga status button (hal. "Picked Up", "Delivered")
+      // Ang "Delivered" ay may ibang kulay kaysa sa iba
+      const actionButtons = actions.map(a => `
+        <button class="btn small ${a === 'Delivered' ? '' : 'secondary'}" data-act="${esc(a)}">${esc(a)}</button>
+      `).join('');
+
+      // Bahagi ng note at mga status button (hindi ipapakita kung tapos na)
+      const updateSection = finished ? '' : `
+        <label>Location / note (optional)</label>
+        <input class="note" maxlength="150" placeholder="e.g. Left the warehouse">
+
+        <div class="row" style="margin-top:.75rem">
+          ${actionButtons}
+        </div>
+      `;
+
+      // Ang buong card
+      return `
         <article class="job" data-id="${esc(s.shipment_id)}" data-track="${esc(s.tracking_no)}">
+
+          <!-- Tracking number at status -->
           <div class="row" style="justify-content:space-between">
-            <h3>${esc(s.tracking_no)}</h3>${statusPill(s.status)}
+            <h3>${esc(s.tracking_no)}</h3>
+            ${statusPill(s.status)}
           </div>
-          <p><strong>${esc(s.recipient_name)}</strong> &middot; ${esc(s.recipient_contact)}<br>
-             <span class="muted">Pickup:</span> ${esc(s.pickup_address)}<br>
-             <span class="muted">Deliver to:</span> ${esc(s.delivery_address)}</p>
 
-          ${finished ? '' : `
-            <label>Location / note (optional)</label>
-            <input class="note" maxlength="150" placeholder="e.g. Left the warehouse">
-            <div class="row" style="margin-top:.75rem">
-              ${actions.map(a => `<button class="btn small ${a === 'Delivered' ? '' : 'secondary'}" data-act="${esc(a)}">${esc(a)}</button>`).join('')}
-            </div>`}
+          <!-- Detalye ng padala -->
+          <p>
+            <strong>${esc(s.recipient_name)}</strong> &middot; ${esc(s.recipient_contact)}<br>
+            <span class="muted">Pickup:</span> ${esc(s.pickup_address)}<br>
+            <span class="muted">Deliver to:</span> ${esc(s.delivery_address)}
+          </p>
 
+          <!-- Note at mga status button -->
+          ${updateSection}
+
+          <!-- Button para makita ang history -->
           <div class="row" style="margin-top:.75rem">
             <button class="btn small secondary" data-act="history">View history</button>
           </div>
+
+          <!-- Dito lalabas ang history (galing sa JS) -->
           <div class="history"></div>
-        </article>`;
-      }).join('');
+
+        </article>
+      `;
     }
 
-    /* ---------- BUTTON CLICKS (one listener for all cards) ---------- */
+
+    /* =========================================================
+       5. PAG-PINDOT NG BUTTON SA CARD
+       Isa lang na listener para sa lahat ng card.
+       ========================================================= */
     document.getElementById('jobs').addEventListener('click', async (e) => {
+
+      // Alamin kung button na may data-act ang pinindot
       const btn = e.target.closest('button[data-act]');
       if (!btn) return;
-      const card = btn.closest('.job');
+
+      const card       = btn.closest('.job');
       const shipmentId = card.dataset.id;
-      const act = btn.dataset.act;
+      const act        = btn.dataset.act;
 
-      if (act === 'history') return showHistory(card, shipmentId);
+      // --- "View history": ipakita ang history ---
+      if (act === 'history') {
+        return showHistory(card, shipmentId);
+      }
 
-      if (act === 'Delivered') {          // needs proof first -> open dialog
+      // --- "Delivered": buksan muna ang pop-up para sa proof ---
+      if (act === 'Delivered') {
         deliverTarget = { id: shipmentId, track: card.dataset.track };
+
         document.getElementById('deliverFor').textContent = 'Shipment ' + card.dataset.track;
         document.getElementById('deliverMsg').hidden = true;
         document.getElementById('deliverForm').reset();
@@ -140,20 +280,30 @@
         return;
       }
 
-      // Any other status = add a NEW tracking event (never edits old ones)
+      // --- Ibang status: magdagdag ng BAGONG tracking event ---
+      // (Hindi binabago ang luma, laging dagdag lang)
       const note = card.querySelector('.note').value.trim();
-      btn.disabled = true;
+
+      btn.disabled = true;                                        // iwas double-click
       const { error } = await addTrackingEvent(shipmentId, act, note);
       btn.disabled = false;
+
       const pageMsg = document.getElementById('pageMsg');
-      if (error) return showMsg(pageMsg, error.message, 'error');
+
+      if (error) {
+        return showMsg(pageMsg, error.message, 'error');
+      }
+
       showMsg(pageMsg, 'Status updated to ' + act + '.', 'ok');
-      loadJobs();
+      loadJobs();                                                 // i-refresh ang listahan
     });
 
-    /* ---------- ADD A TRACKING EVENT ----------
-       Tracking Integrity Policy: rider can only INSERT. created_by must be
-       the rider (RLS checks this) and the DB blocks update/delete. */
+
+    /* =========================================================
+       6. MAGDAGDAG NG TRACKING EVENT
+       Ang rider ay pwede lang MAGDAGDAG (insert).
+       Bawal mag-edit o mag-delete (hinaharang ng database).
+       ========================================================= */
     function addTrackingEvent(shipmentId, status, notes) {
       return sb.from('tracking_events').insert({
         shipment_id: shipmentId,
@@ -164,43 +314,76 @@
       });
     }
 
-    /* ---------- SHOW HISTORY FOR ONE CARD ---------- */
+
+    /* =========================================================
+       7. IPAKITA ANG HISTORY NG ISANG CARD
+       ========================================================= */
     async function showHistory(card, shipmentId) {
+
+      // Dito ilalagay ang history
       const holder = card.querySelector('.history');
+
+      // Kunin ang lahat ng tracking event ng padala, mula luma hanggang bago
       const { data, error } = await sb
         .from('tracking_events')
         .select('status, location, notes, created_at')
         .eq('shipment_id', shipmentId)
         .order('created_at', { ascending: true });
-      holder.innerHTML = error ? '<p class="msg error">Could not load history.</p>' : renderTimeline(data);
+
+      // Kapag may error, mensahe. Kung wala, ipakita ang timeline.
+      holder.innerHTML = error
+        ? '<p class="msg error">Could not load history.</p>'
+        : renderTimeline(data);
     }
 
-    /* ---------- CONFIRM DELIVERY (proof first, then the Delivered event) ---------- */
-    document.getElementById('cancelDeliver').addEventListener('click', () => document.getElementById('deliverDlg').close());
 
+    /* =========================================================
+       8. POP-UP NG PROOF OF DELIVERY
+       ========================================================= */
+
+    // Cancel button: isara ang pop-up
+    document.getElementById('cancelDeliver').addEventListener('click', () => {
+      document.getElementById('deliverDlg').close();
+    });
+
+    // Submit ("Mark as delivered"): i-save ang proof
     document.getElementById('deliverForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = document.getElementById('deliverMsg');
+
+      e.preventDefault();   // huwag i-reload ang page
+
+      const msg       = document.getElementById('deliverMsg');
       const recipient = document.getElementById('proof_recipient').value.trim();
-      const proof = document.getElementById('proof_ref').value.trim();
-      if (!recipient || !proof) return showMsg(msg, 'Recipient name and proof are required.', 'error');
+      const proof     = document.getElementById('proof_ref').value.trim();
+
+      // Kailangan ang pangalan at proof
+      if (!recipient || !proof) {
+        return showMsg(msg, 'Recipient name and proof are required.', 'error');
+      }
 
       const btn = document.getElementById('confirmDeliverBtn');
-      btn.disabled = true;
+      btn.disabled = true;   // iwas double-click
 
-      // Step 1: save the proof (timestamp is added by the database)
+      // I-save ang proof at gawing Delivered ang padala.
+      // (Ang oras ay awtomatikong nilalagay ng database)
       const { error } = await sb.rpc('complete_delivery_with_proof_integrated', {
-        p_shipment_id: deliverTarget.id,
+        p_shipment_id:    deliverTarget.id,
         p_recipient_name: recipient,
-        p_proof_url: proof
+        p_proof_url:      proof
       });
-      btn.disabled = false;
-      if (error) return showMsg(msg, 'Could not complete delivery: ' + error.message, 'error');
 
+      btn.disabled = false;
+
+      if (error) {
+        return showMsg(msg, 'Could not complete delivery: ' + error.message, 'error');
+      }
+
+      // Tagumpay: isara ang pop-up, magpakita ng mensahe, i-refresh ang listahan
       document.getElementById('deliverDlg').close();
       showMsg(document.getElementById('pageMsg'), 'Delivery confirmed.', 'ok');
       loadJobs();
     });
+
   </script>
+
 </body>
 </html>

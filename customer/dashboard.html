@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+
+<!-- ================= HEAD ================= -->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,10 +9,11 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
   <link rel="stylesheet" href="../css/styles.css">
 </head>
-<!-- class="guarded" hides the page until requireRole() confirms this is a Customer -->
+
+<!-- "guarded" = nakatago ang page hanggang makumpirmang Customer ang user -->
 <body class="guarded" data-root="../">
 
-  <!-- ===== TOP BAR ===== -->
+  <!-- ================= TOP BAR: pangalan at Sign out ================= -->
   <header class="topbar">
     <div class="brand">Logistics &amp; Delivery</div>
     <div class="who">
@@ -19,7 +22,7 @@
     </div>
   </header>
 
-  <!-- ===== TABS ===== -->
+  <!-- ================= MGA TAB ================= -->
   <nav class="tabs" role="tablist">
     <button role="tab" aria-selected="true"  data-tab="list">My shipments</button>
     <button role="tab" aria-selected="false" data-tab="new">New shipment</button>
@@ -28,35 +31,48 @@
 
   <main>
 
-    <!-- ===== TAB 1: SHIPMENT LIST + TRACKING ===== -->
+    <!-- ================= TAB 1: LISTAHAN NG SHIPMENTS ================= -->
     <section id="tab-list">
+
+      <!-- Table ng mga shipment -->
       <div class="panel">
         <h2>My shipments</h2>
         <p class="muted">Select a shipment to see its tracking history.</p>
         <p id="shipmentLoadMsg" class="msg" hidden></p>
+
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>Tracking no.</th><th>Recipient</th><th>Status</th><th>Booked</th></tr>
+              <tr>
+                <th>Tracking no.</th>
+                <th>Recipient</th>
+                <th>Status</th>
+                <th>Booked</th>
+              </tr>
             </thead>
             <tbody id="shipmentRows"></tbody>
           </table>
         </div>
+
+        <!-- Lalabas kung walang shipment -->
         <p id="emptyList" class="muted" hidden>No shipments yet. Open "New shipment" to book your first one.</p>
       </div>
 
-      <!-- Tracking panel (filled when a row is clicked) -->
+      <!-- Tracking history (lalabas kapag may pinindot na row) -->
       <div class="panel" id="trackPanel" hidden>
         <h2 id="trackTitle"></h2>
         <div id="trackBody"></div>
       </div>
     </section>
 
-    <!-- ===== TAB 2: CREATE SHIPMENT ===== -->
+    <!-- ================= TAB 2: MAG-BOOK NG BAGONG SHIPMENT ================= -->
     <section id="tab-new" hidden>
       <div class="panel">
         <h2>New shipment</h2>
+
         <form id="shipForm" novalidate>
+
+          <!-- Pangalan at mobile ng tatanggap -->
           <div class="grid-2">
             <div>
               <label for="recipient_name">Recipient name</label>
@@ -68,15 +84,19 @@
             </div>
           </div>
 
+          <!-- Mga address -->
           <label for="pickup_address">Pickup address</label>
           <textarea id="pickup_address" required maxlength="250"></textarea>
 
           <label for="delivery_address">Delivery address</label>
           <textarea id="delivery_address" required maxlength="250"></textarea>
 
+          <!-- Tungkol sa package -->
           <h3 style="margin-top:1.25rem">Package</h3>
+
           <label for="pkg_desc">What are you sending?</label>
           <input id="pkg_desc" required maxlength="150">
+
           <div class="grid-2">
             <div>
               <label for="pkg_weight">Weight (kg)</label>
@@ -88,34 +108,54 @@
             </div>
           </div>
 
+          <!-- Button at message -->
           <button class="btn full" id="shipBtn" type="submit">Book shipment</button>
           <p id="shipMsg" class="msg" hidden></p>
         </form>
       </div>
     </section>
 
-    <!-- ===== TAB 3: NOTIFICATIONS AND CUSTOMER COMPLAINTS ===== -->
+    <!-- ================= TAB 3: UPDATES AT COMPLAINTS ================= -->
     <section id="tab-updates" hidden>
+
+      <!-- Mga notification -->
       <div class="panel">
         <h2>Shipment updates</h2>
         <p class="muted">Notifications are created when a tracking event is added.</p>
         <div id="notificationList"></div>
       </div>
+
+      <!-- Form ng complaint at listahan ng complaints -->
       <div class="panel">
         <h2>Contact us about a shipment</h2>
+
         <form id="complaintForm" novalidate>
           <label for="complaintShipment">Shipment</label>
           <select id="complaintShipment" required></select>
+
           <label for="complaintSubject">Subject</label>
           <input id="complaintSubject" maxlength="120" required>
+
           <label for="complaintDescription">How can we help?</label>
           <textarea id="complaintDescription" maxlength="2000" required></textarea>
+
           <button class="btn" id="complaintBtn" type="submit">Submit complaint</button>
           <p id="complaintMsg" class="msg" hidden></p>
         </form>
+
         <h3 style="margin-top:1.5rem">My complaints</h3>
         <div class="table-wrap">
-          <table><thead><tr><th>Shipment</th><th>Subject</th><th>Status</th><th>Submitted</th></tr></thead><tbody id="complaintRows"></tbody></table>
+          <table>
+            <thead>
+              <tr>
+                <th>Shipment</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Submitted</th>
+              </tr>
+            </thead>
+            <tbody id="complaintRows"></tbody>
+          </table>
         </div>
         <p id="emptyComplaints" class="muted" hidden>No complaints yet.</p>
       </div>
@@ -123,25 +163,45 @@
 
   </main>
 
+  <!-- ================= MGA SCRIPT (huwag baguhin ang ayos) ================= -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/auth.js"></script>
-  <script>
-    /* Customer dashboard: list/book owned shipments, view event history, notifications, and complaints. */
-    let me = null;            // logged-in profile
-    let customerId = null;    // this customer's id (needed when inserting shipments)
 
-    /* ---------- STARTUP ---------- */
+  <script>
+    /* =====================================================================
+       DASHBOARD NG CUSTOMER
+
+       MGA BAHAGI:
+       1. MGA VARIABLE
+       2. SIMULA
+       3. PAGLIPAT NG TAB
+       4. LISTAHAN NG SHIPMENTS
+       5. TRACKING HISTORY
+       6. MAG-BOOK NG SHIPMENT
+       7. UPDATES AT COMPLAINTS
+       ===================================================================== */
+
+
+    /* ===== 1. MGA VARIABLE ===== */
+    let me = null;           // impormasyon ng nakalogin
+    let customerId = null;   // ID ng customer (kailangan sa pag-save)
+
+
+    /* ===== 2. SIMULA (tumatakbo pagbukas ng page) ===== */
     (async () => {
-      me = await requireRole(['Customer']);    // guard: only customers may stay
+      // Customer lang ang puwede dito
+      me = await requireRole(['Customer']);
       if (!me) return;
 
+      // Ipakita ang pangalan at ihanda ang Sign out
       document.getElementById('userName').textContent = me.full_name;
       document.getElementById('logoutBtn').addEventListener('click', logoutUser);
 
-      // Find this customer's id (RLS only returns the user's own row)
+      // Hanapin ang customer ID
       const { data } = await sb.from('customers').select('customer_id').eq('user_id', me.user_id).single();
       customerId = data?.customer_id;
+
       if (!customerId) {
         showMsg(document.getElementById('shipmentLoadMsg'), 'Could not load your customer profile. Contact an administrator.', 'error');
         return;
@@ -150,33 +210,46 @@
       loadShipments();
     })();
 
-    /* ---------- TAB SWITCHING ---------- */
-    document.querySelectorAll('.tabs button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b === btn));
-        document.getElementById('tab-list').hidden = btn.dataset.tab !== 'list';
-        document.getElementById('tab-new').hidden  = btn.dataset.tab !== 'new';
-        document.getElementById('tab-updates').hidden = btn.dataset.tab !== 'updates';
+
+    /* ===== 3. PAGLIPAT NG TAB ===== */
+    document.querySelectorAll('.tabs button').forEach(button => {
+      button.addEventListener('click', () => {
+        // Ang pinindot na tab ang "selected"
+        document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b === button));
+
+        // Ipakita lang ang section ng napiling tab
+        document.getElementById('tab-list').hidden    = button.dataset.tab !== 'list';
+        document.getElementById('tab-new').hidden     = button.dataset.tab !== 'new';
+        document.getElementById('tab-updates').hidden = button.dataset.tab !== 'updates';
       });
     });
 
-    /* ---------- LOAD MY SHIPMENTS ----------
-       No filter needed: RLS already limits results to this customer. */
+
+    /* ===== 4. LISTAHAN NG SHIPMENTS ===== */
+    // Kunin at ipakita ang mga shipment ng customer
+    // (kusa nang naka-filter ng database, sa kanya lang)
     async function loadShipments() {
+      const message = document.getElementById('shipmentLoadMsg');
+      const tbody = document.getElementById('shipmentRows');
+
       const { data, error } = await sb
         .from('shipments')
         .select('shipment_id, tracking_no, recipient_name, status, created_at')
         .order('created_at', { ascending: false });
 
-      const tbody = document.getElementById('shipmentRows');
       if (error) {
         tbody.innerHTML = '';
-        return showMsg(document.getElementById('shipmentLoadMsg'), 'Could not load your shipments: ' + error.message, 'error');
+        return showMsg(message, 'Could not load your shipments: ' + error.message, 'error');
       }
-      showMsg(document.getElementById('shipmentLoadMsg'), '', '');
 
-      document.getElementById('emptyList').hidden = (data || []).length > 0;
-      tbody.innerHTML = (data || []).map(s => `
+      showMsg(message, '', '');
+      const shipments = data || [];
+
+      // Ipakita ang "walang laman" kung wala
+      document.getElementById('emptyList').hidden = shipments.length > 0;
+
+      // Row ng bawat shipment
+      tbody.innerHTML = shipments.map(s => `
         <tr class="clickable" data-id="${esc(s.shipment_id)}" data-track="${esc(s.tracking_no)}" tabindex="0">
           <td>${esc(s.tracking_no)}</td>
           <td>${esc(s.recipient_name)}</td>
@@ -184,20 +257,28 @@
           <td>${formatDate(s.created_at)}</td>
         </tr>`).join('');
 
-      // Click (or press Enter) on a row = open tracking
-      tbody.querySelectorAll('tr').forEach(tr => {
-        tr.addEventListener('click', () => showTracking(tr.dataset.id, tr.dataset.track));
-        tr.addEventListener('keydown', e => { if (e.key === 'Enter') showTracking(tr.dataset.id, tr.dataset.track); });
+      // Pag pinindot (o Enter) ang row, ipakita ang tracking
+      tbody.querySelectorAll('tr').forEach(row => {
+        row.addEventListener('click', () => showTracking(row.dataset.id, row.dataset.track));
+        row.addEventListener('keydown', e => {
+          if (e.key === 'Enter') showTracking(row.dataset.id, row.dataset.track);
+        });
       });
-      populateComplaintShipments(data || []);
+
+      // Ilagay din ang mga shipment sa dropdown ng complaint form
+      populateComplaintShipments(shipments);
     }
 
-    /* ---------- SHOW TRACKING HISTORY ---------- */
+
+    /* ===== 5. TRACKING HISTORY ===== */
+    // Ipakita ang tracking history ng piniling shipment
     async function showTracking(shipmentId, trackingNo) {
       const panel = document.getElementById('trackPanel');
+      const body = document.getElementById('trackBody');
+
       panel.hidden = false;
       document.getElementById('trackTitle').textContent = 'Tracking ' + trackingNo;
-      document.getElementById('trackBody').innerHTML = '<p class="muted">Loading...</p>';
+      body.innerHTML = '<p class="muted">Loading...</p>';
 
       const { data, error } = await sb
         .from('tracking_events')
@@ -205,29 +286,38 @@
         .eq('shipment_id', shipmentId)
         .order('created_at', { ascending: true });
 
-      document.getElementById('trackBody').innerHTML = error
+      body.innerHTML = error
         ? '<p class="msg error">Could not load tracking.</p>'
         : renderTimeline(data);
+
       panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    /* ---------- CREATE SHIPMENT ---------- */
+
+    /* ===== 6. MAG-BOOK NG SHIPMENT ===== */
     document.getElementById('shipForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+
       const msg = document.getElementById('shipMsg');
       const btn = document.getElementById('shipBtn');
+
+      // Maikling paraan para kunin ang laman ng input
       const v = id => document.getElementById(id).value.trim();
 
-      // Client-side validation (the database CHECK constraints repeat these rules)
-      if (!v('recipient_name') || !v('pickup_address') || !v('delivery_address') || !v('pkg_desc'))
+      // I-check kung kumpleto at tama
+      if (!v('recipient_name') || !v('pickup_address') || !v('delivery_address') || !v('pkg_desc')) {
         return showMsg(msg, 'Fill in all required fields.', 'error');
-      if (!/^09[0-9]{9}$/.test(v('recipient_contact')))
+      }
+      if (!/^09[0-9]{9}$/.test(v('recipient_contact'))) {
         return showMsg(msg, 'Enter the recipient mobile like 09171234567.', 'error');
+      }
       const weight = parseFloat(v('pkg_weight'));
-      if (!(weight > 0)) return showMsg(msg, 'Weight must be greater than 0.', 'error');
+      if (!(weight > 0)) {
+        return showMsg(msg, 'Weight must be greater than 0.', 'error');
+      }
 
+      // I-save sa database (isang function ang gumagawa ng shipment at package)
       btn.disabled = true;
-      // The database function creates the shipment and package atomically.
       const { data, error } = await sb.rpc('create_shipment_with_package', {
         p_recipient_name: v('recipient_name'),
         p_recipient_contact: v('recipient_contact'),
@@ -238,67 +328,104 @@
         p_package_declared_value: parseFloat(v('pkg_value')) || 0
       });
       btn.disabled = false;
-      if (error) return showMsg(msg, 'Could not book shipment: ' + error.message, 'error');
-      const ship = data?.[0];
-      if (!ship) return showMsg(msg, 'Shipment booking returned no tracking details. Please refresh and check your shipments.', 'error');
 
+      if (error) return showMsg(msg, 'Could not book shipment: ' + error.message, 'error');
+
+      const ship = data?.[0];
+      if (!ship) {
+        return showMsg(msg, 'Shipment booking returned no tracking details. Please refresh and check your shipments.', 'error');
+      }
+
+      // Success: ipakita ang tracking number, linisin ang form, i-refresh ang listahan
       showMsg(msg, 'Shipment booked. Your tracking number is ' + ship.tracking_no + '.', 'ok');
       e.target.reset();
       loadShipments();
     });
 
-    // Populate the complaint form only with shipments returned by the customer's RLS-filtered query.
+
+    /* ===== 7. UPDATES AT COMPLAINTS ===== */
+
+    // Ilagay ang mga shipment ng customer sa dropdown ng complaint form
     function populateComplaintShipments(shipments) {
-      document.getElementById('complaintShipment').innerHTML = shipments.map(shipment =>
-        `<option value="${esc(shipment.shipment_id)}">${esc(shipment.tracking_no)} — ${esc(shipment.recipient_name)}</option>`
-      ).join('');
+      document.getElementById('complaintShipment').innerHTML = shipments
+        .map(s => `<option value="${esc(s.shipment_id)}">${esc(s.tracking_no)} — ${esc(s.recipient_name)}</option>`)
+        .join('');
     }
 
-    // Load only this customer's notifications and complaint history.
+    // Kunin ang mga notification at complaints ng customer
     async function loadCustomerUpdates() {
       const [notificationResult, complaintResult] = await Promise.all([
-        sb.from('notifications').select('message, created_at, is_read')
-          .eq('user_id', me.user_id).order('created_at', { ascending: false }),
-        sb.from('complaints').select('subject, status, created_at, shipments(tracking_no)')
+        sb.from('notifications')
+          .select('message, created_at, is_read')
+          .eq('user_id', me.user_id)
+          .order('created_at', { ascending: false }),
+        sb.from('complaints')
+          .select('subject, status, created_at, shipments(tracking_no)')
           .order('created_at', { ascending: false })
       ]);
-      const notifications = notificationResult.data || [];
-      document.getElementById('notificationList').innerHTML = notificationResult.error
-        ? '<p class="msg error">Could not load notifications.</p>'
-        : notifications.length
-          ? notifications.map(item => `<article class="notification-item"><strong>${esc(item.message)}</strong><span class="muted">${formatDate(item.created_at)}</span></article>`).join('')
-          : '<p class="muted">No shipment updates yet.</p>';
 
+      // ----- Mga notification -----
+      const notifications = notificationResult.data || [];
+      const notificationList = document.getElementById('notificationList');
+
+      if (notificationResult.error) {
+        notificationList.innerHTML = '<p class="msg error">Could not load notifications.</p>';
+      } else if (notifications.length === 0) {
+        notificationList.innerHTML = '<p class="muted">No shipment updates yet.</p>';
+      } else {
+        notificationList.innerHTML = notifications.map(item => `
+          <article class="notification-item">
+            <strong>${esc(item.message)}</strong>
+            <span class="muted">${formatDate(item.created_at)}</span>
+          </article>`).join('');
+      }
+
+      // ----- Mga complaint -----
       const complaints = complaintResult.data || [];
-      document.getElementById('complaintRows').innerHTML = complaintResult.error ? ''
-        : complaints.map(item => `<tr><td>${esc(item.shipments?.tracking_no || '—')}</td><td>${esc(item.subject)}</td><td>${esc(item.status)}</td><td>${formatDate(item.created_at)}</td></tr>`).join('');
+
+      document.getElementById('complaintRows').innerHTML = complaintResult.error
+        ? ''
+        : complaints.map(item => `<tr>
+            <td>${esc(item.shipments?.tracking_no || '—')}</td>
+            <td>${esc(item.subject)}</td>
+            <td>${esc(item.status)}</td>
+            <td>${formatDate(item.created_at)}</td>
+          </tr>`).join('');
+
       document.getElementById('emptyComplaints').hidden = !!complaintResult.error || complaints.length > 0;
     }
 
-    // Submit a complaint tied to one of the customer's own shipments.
+    // Pag-submit ng complaint form
     document.getElementById('complaintForm').addEventListener('submit', async event => {
       event.preventDefault();
+
       const message = document.getElementById('complaintMsg');
+      const button = document.getElementById('complaintBtn');
       const shipmentId = document.getElementById('complaintShipment').value;
       const subject = document.getElementById('complaintSubject').value.trim();
       const description = document.getElementById('complaintDescription').value.trim();
-      if (!shipmentId || !subject || !description) return showMsg(message, 'Select a shipment and complete both complaint fields.', 'error');
-      const button = document.getElementById('complaintBtn');
+
+      if (!shipmentId || !subject || !description) {
+        return showMsg(message, 'Select a shipment and complete both complaint fields.', 'error');
+      }
+
       button.disabled = true;
       const { error } = await sb.from('complaints').insert({
         shipment_id: shipmentId,
         customer_id: customerId,
-        subject,
+        subject: subject,
         message: description
       });
       button.disabled = false;
+
       if (error) return showMsg(message, 'Could not submit complaint: ' + error.message, 'error');
+
       event.target.reset();
       showMsg(message, 'Your complaint has been submitted.', 'ok');
       await loadCustomerUpdates();
     });
 
-    // Keep shipment updates in sync whenever the customer opens the updates tab.
+    // Kapag binuksan ang tab na "Updates & help", kunin ulit ang data
     document.querySelector('[data-tab="updates"]').addEventListener('click', loadCustomerUpdates);
   </script>
 </body>

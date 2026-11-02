@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+
+<!-- ================= HEAD ================= -->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,30 +9,41 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
   <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body data-root="./">
   <div class="auth-wrap">
     <div class="auth-card">
+
+      <!-- ================= PAMAGAT ================= -->
       <div class="brand">Logistics &amp; Delivery</div>
       <h1>Create a customer account</h1>
       <p class="muted">Staff accounts are created by an administrator, not here.</p>
 
+      <!-- ================= FORM 1: Pag-register ================= -->
       <form id="regForm" novalidate>
+
+        <!-- Pangalan -->
         <label for="full_name">Full name</label>
         <input id="full_name" type="text" autocomplete="name" required maxlength="100">
 
+        <!-- Mobile number (09 + 9 na numero) -->
         <label for="contact_no">Mobile number</label>
-        <!-- pattern = client-side validation (Philippine mobile format, e.g. 09171234567) -->
         <input id="contact_no" type="tel" autocomplete="tel" required placeholder="09171234567" pattern="09[0-9]{9}">
 
+        <!-- Address -->
         <label for="address">Address</label>
         <textarea id="address" required maxlength="250"></textarea>
 
+        <!-- Email -->
         <label for="email">Email</label>
         <input id="email" type="email" autocomplete="email" required>
 
+        <!-- Password -->
         <label for="password">Password</label>
         <input id="password" type="password" autocomplete="new-password" required maxlength="20"
           aria-describedby="passwordRequirements">
+
+        <!-- Listahan ng rules ng password (nagbabago habang nagta-type) -->
         <div id="passwordRequirements" class="password-requirements">
           <p class="muted">Password must contain:</p>
           <ul>
@@ -42,49 +55,66 @@
           </ul>
         </div>
 
+        <!-- Ulitin ang password -->
         <label for="confirm">Confirm password</label>
         <input id="confirm" type="password" autocomplete="new-password" required>
 
+        <!-- Button -->
         <button class="btn full" id="regBtn" type="submit">Create account</button>
       </form>
 
-      <!-- New accounts must verify the Supabase sign-up OTP before entering the app. -->
+      <!-- ================= FORM 2: Code galing sa email (nakatago muna) ================= -->
       <form id="verifyForm" hidden novalidate>
         <p id="verifyInstructions" class="muted"></p>
+
         <label for="signupCode">Email verification code</label>
         <input id="signupCode" type="text" inputmode="numeric" autocomplete="one-time-code"
           pattern="[0-9]{6}" maxlength="6" required>
+
         <button class="btn full" id="verifyBtn" type="submit">Verify email</button>
         <button class="btn secondary full" id="resendBtn" type="button">Send a new code</button>
       </form>
 
+      <!-- ================= MESSAGE: dito lalabas ang error o success ================= -->
       <p id="msg" class="msg" role="status" aria-live="polite" hidden></p>
+
+      <!-- Link papunta sa login -->
       <p class="auth-links">Already registered? <a href="login.html">Sign in</a></p>
     </div>
   </div>
 
+  <!-- ================= MGA SCRIPT (huwag baguhin ang ayos) ================= -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="js/supabaseClient.js"></script>
   <script src="js/auth.js"></script>
+
   <script>
+    // ============ 1. MGA ELEMENT NA GAGAMITIN ============
     const form = document.getElementById('regForm');
     const verifyForm = document.getElementById('verifyForm');
-    const msg  = document.getElementById('msg');
-    const btn  = document.getElementById('regBtn');
+    const msg = document.getElementById('msg');
+    const btn = document.getElementById('regBtn');
     const verifyBtn = document.getElementById('verifyBtn');
     const resendBtn = document.getElementById('resendBtn');
     const passwordInput = document.getElementById('password');
     const passwordRequirements = document.getElementById('passwordRequirements');
+
+    // Email na ginamit sa pag-register
     let signupEmail = '';
 
+
+    // ============ 2. HABANG NAGTA-TYPE NG PASSWORD ============
+    // Ina-update ang listahan ng rules
     passwordInput.addEventListener('input', () => {
       updatePasswordRequirements(passwordInput.value, passwordRequirements);
     });
 
+
+    // ============ 3. PAG-CLICK NG "CREATE ACCOUNT" ============
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // ---- Client-side validation (the database enforces rules again) ----
+      // Kunin ang laman ng form
       const data = {
         full_name:  document.getElementById('full_name').value.trim(),
         contact_no: document.getElementById('contact_no').value.trim(),
@@ -92,16 +122,18 @@
         email:      document.getElementById('email').value.trim(),
         password:   document.getElementById('password').value
       };
-      signupEmail = data.email;
       const confirm = document.getElementById('confirm').value;
+      signupEmail = data.email;
 
+      // I-check kung tama ang laman
       if (!data.full_name || !data.address || !data.email) return showMsg(msg, 'Fill in all fields.', 'error');
       if (!/^09[0-9]{9}$/.test(data.contact_no)) return showMsg(msg, 'Enter a mobile number like 09171234567.', 'error');
+
       const pwProblem = passwordProblem(data.password);
       if (pwProblem) return showMsg(msg, pwProblem, 'error');
       if (data.password !== confirm) return showMsg(msg, 'Passwords do not match.', 'error');
 
-      // ---- Create the account ----
+      // Gawin ang account
       btn.disabled = true;
       const result = await registerCustomer(data);
       btn.disabled = false;
@@ -109,6 +141,7 @@
       if (!result.ok) return showMsg(msg, result.message, 'error');
 
       if (result.needsConfirmation) {
+        // Ipakita ang form para sa code
         document.getElementById('verifyInstructions').textContent =
           'If the address is eligible, Supabase sent a verification code to ' + signupEmail + '. Check your inbox, spam, and promotions folders.';
         form.hidden = true;
@@ -116,34 +149,36 @@
         startResendCooldown(resendBtn, 'Send a new code');
         showMsg(msg, 'Enter the code from your email to verify your account.', 'ok');
       } else {
-        // A session here means Supabase email confirmation is disabled for this project.
+        // Hindi naka-on ang email confirmation sa Supabase
         await sb.auth.signOut();
         showMsg(msg, 'The account was created, but email confirmation is disabled in Supabase. Enable Confirm email in Authentication settings, then register with a new email address.', 'error');
       }
     });
 
-    // Verifies the Supabase sign-up OTP before granting access to the customer dashboard.
-    verifyForm.addEventListener('submit', async event => {
+
+    // ============ 4. PAG-CLICK NG "VERIFY EMAIL" ============
+    verifyForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const codeInput = document.getElementById('signupCode');
-      const token = codeInput.value.trim();
+
+      const token = document.getElementById('signupCode').value.trim();
+
+      // Dapat 6 na numero
       if (!/^[0-9]{6}$/.test(token)) {
         return showMsg(msg, 'Enter the 6-digit code from your email.', 'error');
       }
 
       verifyBtn.disabled = true;
       resendBtn.disabled = true;
+
       try {
-        const { error } = await sb.auth.verifyOtp({
-          email: signupEmail,
-          token,
-          type: 'signup'
-        });
+        const { error } = await sb.auth.verifyOtp({ email: signupEmail, token, type: 'signup' });
+
         if (error) {
           showMsg(msg, 'The code is invalid or expired. Request a new code and try again.', 'error');
           return;
         }
 
+        // Tama ang code, punta sa dashboard ng customer
         location.replace(ROLE_HOME.Customer);
       } catch (error) {
         showMsg(msg, 'Unable to verify your email right now. Please try again.', 'error');
@@ -152,18 +187,19 @@
       }
     });
 
-    // Requests a fresh sign-up OTP using Supabase's resend endpoint.
+
+    // ============ 5. PAG-CLICK NG "SEND A NEW CODE" ============
     resendBtn.addEventListener('click', async () => {
       startResendCooldown(resendBtn, 'Send a new code');
+
       try {
-        const { error } = await sb.auth.resend({
-          type: 'signup',
-          email: signupEmail
-        });
+        const { error } = await sb.auth.resend({ type: 'signup', email: signupEmail });
+
         if (error) {
           showMsg(msg, 'Could not resend the code: ' + error.message, 'error');
           return;
         }
+
         document.getElementById('signupCode').value = '';
         showMsg(msg, 'A new verification code was requested. Check your email.', 'ok');
       } catch (error) {
