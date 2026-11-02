@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My shipments - Logistics &amp; Delivery</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<!-- class="guarded" hides the page until requireRole() confirms this is a Customer -->
+<body class="guarded" data-root="../">
+
+  <!-- ===== TOP BAR ===== -->
+  <header class="topbar">
+    <div class="brand">Logistics &amp; Delivery</div>
+    <div class="who">
+      <span id="userName"></span>
+      <button class="btn small secondary" id="logoutBtn" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <!-- ===== TABS ===== -->
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true"  data-tab="list">My shipments</button>
+    <button role="tab" aria-selected="false" data-tab="new">New shipment</button>
+    <button role="tab" aria-selected="false" data-tab="updates">Updates &amp; help</button>
+  </nav>
+
+  <main>
+
+    <!-- ===== TAB 1: SHIPMENT LIST + TRACKING ===== -->
+    <section id="tab-list">
+      <div class="panel">
+        <h2>My shipments</h2>
+        <p class="muted">Select a shipment to see its tracking history.</p>
+        <p id="shipmentLoadMsg" class="msg" hidden></p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Tracking no.</th><th>Recipient</th><th>Status</th><th>Booked</th></tr>
+            </thead>
+            <tbody id="shipmentRows"></tbody>
+          </table>
+        </div>
+        <p id="emptyList" class="muted" hidden>No shipments yet. Open "New shipment" to book your first one.</p>
+      </div>
+
+      <!-- Tracking panel (filled when a row is clicked) -->
+      <div class="panel" id="trackPanel" hidden>
+        <h2 id="trackTitle"></h2>
+        <div id="trackBody"></div>
+      </div>
+    </section>
+
+    <!-- ===== TAB 2: CREATE SHIPMENT ===== -->
+    <section id="tab-new" hidden>
+      <div class="panel">
+        <h2>New shipment</h2>
+        <form id="shipForm" novalidate>
+          <div class="grid-2">
+            <div>
+              <label for="recipient_name">Recipient name</label>
+              <input id="recipient_name" required maxlength="100">
+            </div>
+            <div>
+              <label for="recipient_contact">Recipient mobile</label>
+              <input id="recipient_contact" type="tel" required placeholder="09171234567" pattern="09[0-9]{9}">
+            </div>
+          </div>
+
+          <label for="pickup_address">Pickup address</label>
+          <textarea id="pickup_address" required maxlength="250"></textarea>
+
+          <label for="delivery_address">Delivery address</label>
+          <textarea id="delivery_address" required maxlength="250"></textarea>
+
+          <h3 style="margin-top:1.25rem">Package</h3>
+          <label for="pkg_desc">What are you sending?</label>
+          <input id="pkg_desc" required maxlength="150">
+          <div class="grid-2">
+            <div>
+              <label for="pkg_weight">Weight (kg)</label>
+              <input id="pkg_weight" type="number" min="0.1" max="100" step="0.1" required>
+            </div>
+            <div>
+              <label for="pkg_value">Declared value (PHP)</label>
+              <input id="pkg_value" type="number" min="0" step="0.01" value="0">
+            </div>
+          </div>
+
+          <button class="btn full" id="shipBtn" type="submit">Book shipment</button>
+          <p id="shipMsg" class="msg" hidden></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== TAB 3: NOTIFICATIONS AND CUSTOMER COMPLAINTS ===== -->
+    <section id="tab-updates" hidden>
+      <div class="panel">
+        <h2>Shipment updates</h2>
+        <p class="muted">Notifications are created when a tracking event is added.</p>
+        <div id="notificationList"></div>
+      </div>
+      <div class="panel">
+        <h2>Contact us about a shipment</h2>
+        <form id="complaintForm" novalidate>
+          <label for="complaintShipment">Shipment</label>
+          <select id="complaintShipment" required></select>
+          <label for="complaintSubject">Subject</label>
+          <input id="complaintSubject" maxlength="120" required>
+          <label for="complaintDescription">How can we help?</label>
+          <textarea id="complaintDescription" maxlength="2000" required></textarea>
+          <button class="btn" id="complaintBtn" type="submit">Submit complaint</button>
+          <p id="complaintMsg" class="msg" hidden></p>
+        </form>
+        <h3 style="margin-top:1.5rem">My complaints</h3>
+        <div class="table-wrap">
+          <table><thead><tr><th>Shipment</th><th>Subject</th><th>Status</th><th>Submitted</th></tr></thead><tbody id="complaintRows"></tbody></table>
+        </div>
+        <p id="emptyComplaints" class="muted" hidden>No complaints yet.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    /* Customer dashboard: list/book owned shipments, view event history, notifications, and complaints. */
+    let me = null;            // logged-in profile
+    let customerId = null;    // this customer's id (needed when inserting shipments)
+
+    /* ---------- STARTUP ---------- */
+    (async () => {
+      me = await requireRole(['Customer']);    // guard: only customers may stay
+      if (!me) return;
+
+      document.getElementById('userName').textContent = me.full_name;
+      document.getElementById('logoutBtn').addEventListener('click', logoutUser);
+
+      // Find this customer's id (RLS only returns the user's own row)
+      const { data } = await sb.from('customers').select('customer_id').eq('user_id', me.user_id).single();
+      customerId = data?.customer_id;
+      if (!customerId) {
+        showMsg(document.getElementById('shipmentLoadMsg'), 'Could not load your customer profile. Contact an administrator.', 'error');
+        return;
+      }
+
+      loadShipments();
+    })();
+
+    /* ---------- TAB SWITCHING ---------- */
+    document.querySelectorAll('.tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b === btn));
+        document.getElementById('tab-list').hidden = btn.dataset.tab !== 'list';
+        document.getElementById('tab-new').hidden  = btn.dataset.tab !== 'new';
+        document.getElementById('tab-updates').hidden = btn.dataset.tab !== 'updates';
+      });
+    });
+
+    /* ---------- LOAD MY SHIPMENTS ----------
+       No filter needed: RLS already limits results to this customer. */
+    async function loadShipments() {
+      const { data, error } = await sb
+        .from('shipments')
+        .select('shipment_id, tracking_no, recipient_name, status, created_at')
+        .order('created_at', { ascending: false });
+
+      const tbody = document.getElementById('shipmentRows');
+      if (error) {
+        tbody.innerHTML = '';
+        return showMsg(document.getElementById('shipmentLoadMsg'), 'Could not load your shipments: ' + error.message, 'error');
+      }
+      showMsg(document.getElementById('shipmentLoadMsg'), '', '');
+
+      document.getElementById('emptyList').hidden = (data || []).length > 0;
+      tbody.innerHTML = (data || []).map(s => `
+        <tr class="clickable" data-id="${esc(s.shipment_id)}" data-track="${esc(s.tracking_no)}" tabindex="0">
+          <td>${esc(s.tracking_no)}</td>
+          <td>${esc(s.recipient_name)}</td>
+          <td>${statusPill(s.status)}</td>
+          <td>${formatDate(s.created_at)}</td>
+        </tr>`).join('');
+
+      // Click (or press Enter) on a row = open tracking
+      tbody.querySelectorAll('tr').forEach(tr => {
+        tr.addEventListener('click', () => showTracking(tr.dataset.id, tr.dataset.track));
+        tr.addEventListener('keydown', e => { if (e.key === 'Enter') showTracking(tr.dataset.id, tr.dataset.track); });
+      });
+      populateComplaintShipments(data || []);
+    }
+
+    /* ---------- SHOW TRACKING HISTORY ---------- */
+    async function showTracking(shipmentId, trackingNo) {
+      const panel = document.getElementById('trackPanel');
+      panel.hidden = false;
+      document.getElementById('trackTitle').textContent = 'Tracking ' + trackingNo;
+      document.getElementById('trackBody').innerHTML = '<p class="muted">Loading...</p>';
+
+      const { data, error } = await sb
+        .from('tracking_events')
+        .select('status, location, notes, created_at')
+        .eq('shipment_id', shipmentId)
+        .order('created_at', { ascending: true });
+
+      document.getElementById('trackBody').innerHTML = error
+        ? '<p class="msg error">Could not load tracking.</p>'
+        : renderTimeline(data);
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /* ---------- CREATE SHIPMENT ---------- */
+    document.getElementById('shipForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('shipMsg');
+      const btn = document.getElementById('shipBtn');
+      const v = id => document.getElementById(id).value.trim();
+
+      // Client-side validation (the database CHECK constraints repeat these rules)
+      if (!v('recipient_name') || !v('pickup_address') || !v('delivery_address') || !v('pkg_desc'))
+        return showMsg(msg, 'Fill in all required fields.', 'error');
+      if (!/^09[0-9]{9}$/.test(v('recipient_contact')))
+        return showMsg(msg, 'Enter the recipient mobile like 09171234567.', 'error');
+      const weight = parseFloat(v('pkg_weight'));
+      if (!(weight > 0)) return showMsg(msg, 'Weight must be greater than 0.', 'error');
+
+      btn.disabled = true;
+      // The database function creates the shipment and package atomically.
+      const { data, error } = await sb.rpc('create_shipment_with_package', {
+        p_recipient_name: v('recipient_name'),
+        p_recipient_contact: v('recipient_contact'),
+        p_pickup_address: v('pickup_address'),
+        p_delivery_address: v('delivery_address'),
+        p_package_description: v('pkg_desc'),
+        p_package_weight_kg: weight,
+        p_package_declared_value: parseFloat(v('pkg_value')) || 0
+      });
+      btn.disabled = false;
+      if (error) return showMsg(msg, 'Could not book shipment: ' + error.message, 'error');
+      const ship = data?.[0];
+      if (!ship) return showMsg(msg, 'Shipment booking returned no tracking details. Please refresh and check your shipments.', 'error');
+
+      showMsg(msg, 'Shipment booked. Your tracking number is ' + ship.tracking_no + '.', 'ok');
+      e.target.reset();
+      loadShipments();
+    });
+
+    // Populate the complaint form only with shipments returned by the customer's RLS-filtered query.
+    function populateComplaintShipments(shipments) {
+      document.getElementById('complaintShipment').innerHTML = shipments.map(shipment =>
+        `<option value="${esc(shipment.shipment_id)}">${esc(shipment.tracking_no)} — ${esc(shipment.recipient_name)}</option>`
+      ).join('');
+    }
+
+    // Load only this customer's notifications and complaint history.
+    async function loadCustomerUpdates() {
+      const [notificationResult, complaintResult] = await Promise.all([
+        sb.from('notifications').select('message, created_at, is_read')
+          .eq('user_id', me.user_id).order('created_at', { ascending: false }),
+        sb.from('complaints').select('subject, status, created_at, shipments(tracking_no)')
+          .order('created_at', { ascending: false })
+      ]);
+      const notifications = notificationResult.data || [];
+      document.getElementById('notificationList').innerHTML = notificationResult.error
+        ? '<p class="msg error">Could not load notifications.</p>'
+        : notifications.length
+          ? notifications.map(item => `<article class="notification-item"><strong>${esc(item.message)}</strong><span class="muted">${formatDate(item.created_at)}</span></article>`).join('')
+          : '<p class="muted">No shipment updates yet.</p>';
+
+      const complaints = complaintResult.data || [];
+      document.getElementById('complaintRows').innerHTML = complaintResult.error ? ''
+        : complaints.map(item => `<tr><td>${esc(item.shipments?.tracking_no || '—')}</td><td>${esc(item.subject)}</td><td>${esc(item.status)}</td><td>${formatDate(item.created_at)}</td></tr>`).join('');
+      document.getElementById('emptyComplaints').hidden = !!complaintResult.error || complaints.length > 0;
+    }
+
+    // Submit a complaint tied to one of the customer's own shipments.
+    document.getElementById('complaintForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const message = document.getElementById('complaintMsg');
+      const shipmentId = document.getElementById('complaintShipment').value;
+      const subject = document.getElementById('complaintSubject').value.trim();
+      const description = document.getElementById('complaintDescription').value.trim();
+      if (!shipmentId || !subject || !description) return showMsg(message, 'Select a shipment and complete both complaint fields.', 'error');
+      const button = document.getElementById('complaintBtn');
+      button.disabled = true;
+      const { error } = await sb.from('complaints').insert({
+        shipment_id: shipmentId,
+        customer_id: customerId,
+        subject,
+        message: description
+      });
+      button.disabled = false;
+      if (error) return showMsg(message, 'Could not submit complaint: ' + error.message, 'error');
+      event.target.reset();
+      showMsg(message, 'Your complaint has been submitted.', 'ok');
+      await loadCustomerUpdates();
+    });
+
+    // Keep shipment updates in sync whenever the customer opens the updates tab.
+    document.querySelector('[data-tab="updates"]').addEventListener('click', loadCustomerUpdates);
+  </script>
+</body>
+</html>

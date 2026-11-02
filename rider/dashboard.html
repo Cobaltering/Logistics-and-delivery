@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My deliveries - Logistics &amp; Delivery</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<!-- Hidden until requireRole() confirms this is a Delivery Rider -->
+<body class="guarded" data-root="../">
+
+  <header class="topbar">
+    <div class="brand">Logistics &amp; Delivery &middot; Rider</div>
+    <div class="who">
+      <span id="userName"></span>
+      <button class="btn small secondary" id="logoutBtn" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <h2>My assigned deliveries</h2>
+    <p class="muted">You only see shipments a dispatcher assigned to you.</p>
+    <p id="pageMsg" class="msg" hidden></p>
+
+    <!-- Delivery cards are inserted here by loadJobs() -->
+    <div id="jobs"></div>
+    <p id="emptyJobs" class="muted" hidden>No deliveries assigned right now.</p>
+  </main>
+
+  <!-- ===== PROOF OF DELIVERY DIALOG =====
+       Proof-of-Delivery Policy: recipient name + proof + timestamp are all required. -->
+  <dialog id="deliverDlg">
+    <form id="deliverForm" method="dialog" novalidate>
+      <h3>Confirm delivery</h3>
+      <p class="muted" id="deliverFor"></p>
+
+      <label for="proof_recipient">Name of person who received it</label>
+      <input id="proof_recipient" required maxlength="100">
+
+      <label for="proof_ref">Proof of delivery</label>
+      <!-- Phase 1: a link or reference (photo URL / signature ref).
+           Later we can upgrade this to a real photo upload with Supabase Storage. -->
+      <input id="proof_ref" required maxlength="300" placeholder="Photo link or signature reference">
+
+      <p class="muted">Delivery time is recorded automatically.</p>
+      <div class="row" style="margin-top:1rem">
+        <button class="btn" type="submit" id="confirmDeliverBtn">Mark as delivered</button>
+        <button class="btn secondary" type="button" id="cancelDeliver">Cancel</button>
+      </div>
+      <p id="deliverMsg" class="msg" hidden></p>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    /* Rider dashboard: show assigned deliveries, append status events, and capture delivery proof. */
+    let me = null;        // logged-in profile
+    let deliverTarget = null;   // shipment currently being confirmed as delivered
+
+    // Keep available buttons aligned with the permitted shipment status flow.
+    const RIDER_ACTIONS = {
+      'Created': ['Picked Up'],
+      'Picked Up': ['In Transit'],
+      'In Transit': ['At Warehouse', 'Out for Delivery'],
+      'At Warehouse': ['Out for Delivery'],
+      'Out for Delivery': ['Failed Delivery', 'Delivered'],
+      'Failed Delivery': ['Out for Delivery']
+    };
+
+    /* ---------- STARTUP ---------- */
+    (async () => {
+      me = await requireRole(['Delivery Rider']);
+      if (!me) return;
+      document.getElementById('userName').textContent = me.full_name;
+      document.getElementById('logoutBtn').addEventListener('click', logoutUser);
+
+      loadJobs();
+    })();
+
+    /* ---------- LOAD ASSIGNED DELIVERIES ----------
+       Shipment Access Policy: no filter needed. RLS returns ONLY the
+       assignments (and their shipments) belonging to this rider. */
+    async function loadJobs() {
+      const { data, error } = await sb
+        .from('delivery_assignments')
+        .select('assignment_id, shipments(shipment_id, tracking_no, recipient_name, recipient_contact, pickup_address, delivery_address, status)');
+
+      const box = document.getElementById('jobs');
+      if (error) return showMsg(document.getElementById('pageMsg'), 'Could not load deliveries.', 'error');
+
+      const jobs = data.map(d => d.shipments).filter(Boolean);
+      document.getElementById('emptyJobs').hidden = jobs.length > 0;
+
+      box.innerHTML = jobs.map(s => {
+        const finished = ['Delivered', 'Lost', 'Suspicious'].includes(s.status);
+        const actions = [...(RIDER_ACTIONS[s.status] || []), ...(finished ? [] : ['Lost', 'Suspicious'])];
+        return `
+        <article class="job" data-id="${esc(s.shipment_id)}" data-track="${esc(s.tracking_no)}">
+          <div class="row" style="justify-content:space-between">
+            <h3>${esc(s.tracking_no)}</h3>${statusPill(s.status)}
+          </div>
+          <p><strong>${esc(s.recipient_name)}</strong> &middot; ${esc(s.recipient_contact)}<br>
+             <span class="muted">Pickup:</span> ${esc(s.pickup_address)}<br>
+             <span class="muted">Deliver to:</span> ${esc(s.delivery_address)}</p>
+
+          ${finished ? '' : `
+            <label>Location / note (optional)</label>
+            <input class="note" maxlength="150" placeholder="e.g. Left the warehouse">
+            <div class="row" style="margin-top:.75rem">
+              ${actions.map(a => `<button class="btn small ${a === 'Delivered' ? '' : 'secondary'}" data-act="${esc(a)}">${esc(a)}</button>`).join('')}
+            </div>`}
+
+          <div class="row" style="margin-top:.75rem">
+            <button class="btn small secondary" data-act="history">View history</button>
+          </div>
+          <div class="history"></div>
+        </article>`;
+      }).join('');
+    }
+
+    /* ---------- BUTTON CLICKS (one listener for all cards) ---------- */
+    document.getElementById('jobs').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const card = btn.closest('.job');
+      const shipmentId = card.dataset.id;
+      const act = btn.dataset.act;
+
+      if (act === 'history') return showHistory(card, shipmentId);
+
+      if (act === 'Delivered') {          // needs proof first -> open dialog
+        deliverTarget = { id: shipmentId, track: card.dataset.track };
+        document.getElementById('deliverFor').textContent = 'Shipment ' + card.dataset.track;
+        document.getElementById('deliverMsg').hidden = true;
+        document.getElementById('deliverForm').reset();
+        document.getElementById('deliverDlg').showModal();
+        return;
+      }
+
+      // Any other status = add a NEW tracking event (never edits old ones)
+      const note = card.querySelector('.note').value.trim();
+      btn.disabled = true;
+      const { error } = await addTrackingEvent(shipmentId, act, note);
+      btn.disabled = false;
+      const pageMsg = document.getElementById('pageMsg');
+      if (error) return showMsg(pageMsg, error.message, 'error');
+      showMsg(pageMsg, 'Status updated to ' + act + '.', 'ok');
+      loadJobs();
+    });
+
+    /* ---------- ADD A TRACKING EVENT ----------
+       Tracking Integrity Policy: rider can only INSERT. created_by must be
+       the rider (RLS checks this) and the DB blocks update/delete. */
+    function addTrackingEvent(shipmentId, status, notes) {
+      return sb.from('tracking_events').insert({
+        shipment_id: shipmentId,
+        status:      status,
+        notes:       notes || null,
+        location:    notes || null,
+        created_by:  me.user_id
+      });
+    }
+
+    /* ---------- SHOW HISTORY FOR ONE CARD ---------- */
+    async function showHistory(card, shipmentId) {
+      const holder = card.querySelector('.history');
+      const { data, error } = await sb
+        .from('tracking_events')
+        .select('status, location, notes, created_at')
+        .eq('shipment_id', shipmentId)
+        .order('created_at', { ascending: true });
+      holder.innerHTML = error ? '<p class="msg error">Could not load history.</p>' : renderTimeline(data);
+    }
+
+    /* ---------- CONFIRM DELIVERY (proof first, then the Delivered event) ---------- */
+    document.getElementById('cancelDeliver').addEventListener('click', () => document.getElementById('deliverDlg').close());
+
+    document.getElementById('deliverForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('deliverMsg');
+      const recipient = document.getElementById('proof_recipient').value.trim();
+      const proof = document.getElementById('proof_ref').value.trim();
+      if (!recipient || !proof) return showMsg(msg, 'Recipient name and proof are required.', 'error');
+
+      const btn = document.getElementById('confirmDeliverBtn');
+      btn.disabled = true;
+
+      // Step 1: save the proof (timestamp is added by the database)
+      const { error } = await sb.rpc('complete_delivery_with_proof_integrated', {
+        p_shipment_id: deliverTarget.id,
+        p_recipient_name: recipient,
+        p_proof_url: proof
+      });
+      btn.disabled = false;
+      if (error) return showMsg(msg, 'Could not complete delivery: ' + error.message, 'error');
+
+      document.getElementById('deliverDlg').close();
+      showMsg(document.getElementById('pageMsg'), 'Delivery confirmed.', 'ok');
+      loadJobs();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+/* =====================================================================
+   styles.css  -  shared styles for every page
+   Sections: 1 Tokens | 2 Base | 3 Auth pages | 4 App layout |
+             5 Forms & buttons | 6 Tables & pills | 7 Timeline | 8 Responsive
+   ===================================================================== */
+
+/* ---------- 1. DESIGN TOKENS (change colors/fonts here only) ---------- */
+:root {
+  --ink:      #12263a;   /* main text, top bar */
+  --slate:    #5b6b7b;   /* secondary text */
+  --paper:    #eef2f5;   /* page background */
+  --white:    #ffffff;
+  --line:     #d5dde4;   /* borders */
+  --route:    #00798c;   /* primary action color */
+  --route-dk: #005f6e;
+  --signal:   #ffc857;   /* highlight (current status marker) */
+  --danger:   #b3261e;
+  --ok:       #2e7d32;
+  --radius:   6px;
+  --font-head: 'Archivo', 'Segoe UI', sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+}
+
+/* ---------- 2. BASE ---------- */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.5;
+}
+h1, h2, h3 { font-family: var(--font-head); margin: 0 0 .5rem; line-height: 1.2; }
+.muted { color: var(--slate); font-size: .9rem; }
+a { color: var(--route); }
+:focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
+
+/* Pages with a guard stay hidden until requireRole() confirms access */
+body.guarded { visibility: hidden; }
+
+/* ---------- 3. LOGIN / REGISTER PAGES ---------- */
+.auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; }
+.auth-card {
+  width: 100%; max-width: 420px; background: var(--white);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 2rem;
+  border-top: 6px solid var(--route);
+}
+.auth-card h1 { font-size: 1.6rem; }
+.auth-card .brand { color: var(--route); font-weight: 700; font-family: var(--font-head); margin-bottom: 1rem; }
+.auth-links { margin-top: 1rem; font-size: .9rem; }
+.password-requirements { margin-top: .5rem; }
+.password-requirements p { margin: 0 0 .35rem; }
+.password-requirements ul { list-style: none; margin: 0; padding: 0; }
+.password-requirements li { display: flex; align-items: center; gap: .55rem; margin: .2rem 0; font-size: .88rem; }
+.password-requirements li span {
+  display: inline-grid; place-items: center; flex: 0 0 16px; height: 16px;
+  border: 1.5px solid #aeb8c1; border-radius: 50%; color: var(--white); font-size: .7rem;
+}
+.password-requirements li.met span { border-color: var(--ok); background: var(--ok); }
+
+/* ---------- 4. APP LAYOUT (dashboards) ---------- */
+.topbar {
+  background: var(--ink); color: var(--white);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .75rem 1.25rem; gap: 1rem; flex-wrap: wrap;
+}
+.topbar .brand { font-family: var(--font-head); font-weight: 700; font-size: 1.1rem; }
+.topbar .who { font-size: .9rem; display: flex; align-items: center; gap: .75rem; }
+.tabs { display: flex; gap: .25rem; background: var(--white); border-bottom: 1px solid var(--line); padding: 0 1rem; overflow-x: auto; }
+.tabs button {
+  background: none; border: 0; padding: .9rem 1rem; cursor: pointer;
+  font: inherit; color: var(--slate); border-bottom: 3px solid transparent;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--route); font-weight: 600; }
+main { max-width: 1000px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+.panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.25rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+/* ---------- 5. FORMS & BUTTONS ---------- */
+label { display: block; font-weight: 600; font-size: .9rem; margin: .75rem 0 .25rem; }
+input, textarea, select {
+  width: 100%; padding: .6rem .7rem; font: inherit; color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--white);
+}
+textarea { min-height: 80px; resize: vertical; }
+input:user-invalid { border-color: var(--danger); }
+.btn {
+  display: inline-block; padding: .6rem 1.1rem; font: inherit; font-weight: 600;
+  background: var(--route); color: var(--white); border: 0; border-radius: var(--radius); cursor: pointer;
+}
+.btn:hover { background: var(--route-dk); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.secondary { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
+.btn.small { padding: .35rem .7rem; font-size: .85rem; }
+.btn.full { width: 100%; margin-top: 1.25rem; }
+.msg { padding: .6rem .8rem; border-radius: var(--radius); margin-top: 1rem; font-size: .9rem; }
+.msg.error { background: #fbe9e7; color: var(--danger); }
+.msg.ok { background: #e6f4ea; color: var(--ok); }
+.row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+/* ---------- 6. TABLES & STATUS PILLS ---------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--line); }
+th { color: var(--slate); font-weight: 600; font-size: .85rem; }
+tbody tr.clickable { cursor: pointer; }
+tbody tr.clickable:hover { background: var(--paper); }
+.pill { display: inline-block; padding: .15rem .6rem; border-radius: 999px; font-size: .8rem; font-weight: 600; background: var(--paper); border: 1px solid var(--line); white-space: nowrap; }
+.st-created          { background: #e8eef4; }
+.st-picked-up        { background: #dff1f4; }
+.st-in-transit       { background: #d2ecf0; }
+.st-at-warehouse     { background: #e9e4f5; }
+.st-out-for-delivery { background: #fff0c9; }
+.st-delivered        { background: #ddf0df; color: var(--ok); }
+.st-failed-delivery, .st-lost, .st-suspicious { background: #fbe0dc; color: var(--danger); }
+
+/* ---------- 7. TRACKING TIMELINE (the "route line") ---------- */
+.timeline { list-style: none; margin: 1rem 0 0; padding: 0 0 0 1.5rem; border-left: 3px solid var(--route); }
+.timeline li { position: relative; padding-bottom: 1.1rem; }
+.timeline li::before {
+  content: ''; position: absolute; left: -2.07rem; top: .25rem;
+  width: 14px; height: 14px; border-radius: 50%; background: var(--white); border: 3px solid var(--route);
+}
+/* newest event (last in list) gets the highlight color */
+.timeline li:last-child::before { background: var(--signal); border-color: var(--ink); }
+.timeline li:last-child { padding-bottom: 0; }
+.tl-head { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+
+/* Rider delivery cards */
+.job { border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; background: var(--white); }
+.job h3 { font-size: 1.05rem; }
+dialog { border: 1px solid var(--line); border-radius: var(--radius); max-width: 420px; width: 92%; padding: 1.5rem; }
+dialog::backdrop { background: rgba(18, 38, 58, .5); }
+
+/* ---------- STAFF DASHBOARDS ---------- */
+.staff-page main { max-width: 1240px; }
+.topbar .brand { color: var(--white); text-decoration: none; }
+.page-heading { display: flex; justify-content: space-between; align-items: end; gap: 1rem; margin-bottom: 1.25rem; }
+.page-heading h1 { font-size: clamp(1.7rem, 3vw, 2.3rem); }
+.eyebrow { color: var(--route); font-size: .75rem; font-weight: 700; letter-spacing: .12em; margin: 0 0 .4rem; }
+.staff-page .tabs { margin: 0 -1rem 1.25rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.stat-card { display: grid; gap: .45rem; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.1rem; }
+.stat-card span { color: var(--slate); font-size: .86rem; }
+.stat-card strong { font-family: var(--font-head); font-size: 1.9rem; }
+.panel-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.panel-heading .muted { margin: 0; }
+.search-field { display: block; min-width: min(100%, 260px); margin: 0; }
+.check-list { margin: .8rem 0 0; padding-left: 1.2rem; }
+.check-list li { margin: .55rem 0; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .2rem 1rem; }
+.form-wide { grid-column: 1 / -1; }
+.notification-item { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem 0; border-bottom: 1px solid var(--line); }
+.notification-item:last-child { border-bottom: 0; }
+.notification-item strong { font-weight: 600; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.staff-page td .row { flex-wrap: nowrap; }
+.staff-page td .btn { white-space: nowrap; }
+
+/* ---------- LANDING PAGE ---------- */
+/* Public home page: service introduction, route illustration, and account entry points. */
+.landing-page { background: #f8fafb; }
+.landing-page main { max-width: 1180px; padding-top: 0; }
+.landing-nav { max-width: 1240px; margin: auto; padding: 1.15rem 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.landing-brand { display: flex; gap: .45rem; align-items: center; color: var(--ink); text-decoration: none; font-family: var(--font-head); font-weight: 700; }
+.brand-mark { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 8px; background: var(--route); color: var(--white); }
+.brand-amp { color: var(--route); }
+.landing-nav nav { display: flex; align-items: center; gap: 1rem; }
+.landing-nav nav > a:not(.btn) { color: var(--slate); text-decoration: none; font-size: .9rem; }
+.landing-hero { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 2rem; padding: clamp(3rem, 8vw, 6.5rem) 1rem 5rem; }
+.hero-copy h1 { font-size: clamp(2.8rem, 6vw, 5.3rem); letter-spacing: -.055em; margin: .25rem 0 1rem; }
+.hero-copy h1 span { color: var(--route); }
+.hero-description { max-width: 490px; color: var(--slate); font-size: 1.08rem; }
+.hero-actions { margin-top: 1.6rem; gap: 1.3rem; }
+.hero-actions .btn { text-decoration: none; }
+.text-link { font-weight: 600; text-decoration: none; }
+.hero-assurance { display: flex; align-items: center; gap: .55rem; margin-top: 2rem; color: var(--slate); font-size: .86rem; }
+.assurance-dot { width: .55rem; height: .55rem; background: #3a9d72; border-radius: 50%; }
+.route-illustration { position: relative; min-height: 390px; display: grid; place-items: center; overflow: hidden; border-radius: 28px; background: #e7f2f2; }
+.route-glow { position: absolute; width: 280px; height: 280px; border-radius: 50%; background: rgba(0, 121, 140, .08); filter: blur(2px); }
+.route-label { position: absolute; z-index: 2; display: flex; align-items: center; gap: .65rem; padding: .7rem .85rem; border: 1px solid rgba(18, 38, 58, .08); border-radius: 12px; background: var(--white); box-shadow: 0 8px 26px rgba(18, 38, 58, .08); }
+.route-label small, .route-label strong { display: block; }
+.route-label small { color: var(--slate); font-size: .63rem; letter-spacing: .08em; }
+.route-label strong { font-size: .8rem; }
+.route-label-start { top: 16%; left: 8%; }
+.route-label-end { right: 7%; bottom: 17%; }
+.route-pin { width: .7rem; height: .7rem; background: var(--route); border: 3px solid #cde8e9; border-radius: 50%; }
+.route-line { position: absolute; inset: 20% 12%; border-top: 2px dashed rgba(0, 121, 140, .38); border-radius: 50%; transform: rotate(25deg); }
+.route-truck { position: absolute; top: -1.2rem; right: 38%; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--ink); color: var(--white); }
+.parcel-art { position: relative; z-index: 1; width: 160px; height: 140px; transform: rotate(-7deg); }
+.parcel-front { position: absolute; left: 20px; bottom: 6px; width: 100px; height: 96px; border: 2px solid #8a592f; background: #d6a56c; clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%); }
+.parcel-top { position: absolute; top: 14px; left: 20px; z-index: 1; width: 100px; height: 45px; border: 2px solid #8a592f; background: #e6bd8c; clip-path: polygon(50% 0, 100% 35%, 50% 72%, 0 35%); }
+.parcel-side { position: absolute; right: 8px; bottom: 17px; width: 42px; height: 83px; background: #bd8751; clip-path: polygon(0 0, 100% 23%, 100% 80%, 0 100%); }
+.parcel-tape { position: absolute; z-index: 2; top: 32px; left: 67px; width: 15px; height: 91px; background: rgba(255, 232, 183, .8); transform: rotate(29deg); }
+.landing-services { padding: 1rem 1rem 5rem; }
+.section-intro { max-width: 580px; margin-bottom: 1.5rem; }
+.section-intro h2, .landing-cta h2 { font-size: clamp(1.7rem, 3vw, 2.4rem); }
+.service-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.service-card { padding: 1.35rem; border: 1px solid var(--line); border-radius: 12px; background: var(--white); }
+.service-card h3 { margin-top: 1rem; }
+.service-card p { color: var(--slate); margin-bottom: 0; font-size: .92rem; }
+.service-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 8px; background: #e5f2f3; color: var(--route); font-size: .8rem; font-weight: 700; }
+.landing-cta { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin: 0 1rem 4rem; padding: 1.75rem 2rem; border-radius: 14px; background: var(--ink); color: var(--white); }
+.landing-cta h2 { margin: 0; }
+.landing-cta .eyebrow { color: #85d1d8; }
+.landing-cta .btn { text-decoration: none; white-space: nowrap; }
+.landing-footer { display: flex; justify-content: space-between; gap: 1rem; padding: 1.5rem max(2rem, calc((100% - 1180px) / 2)); border-top: 1px solid var(--line); color: var(--slate); font-size: .85rem; }
+.landing-footer a { color: var(--ink); font-weight: 700; text-decoration: none; }
+
+/* ---------- 8. RESPONSIVE ---------- */
+@media (max-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .auth-card { padding: 1.5rem; }
+  .page-heading, .panel-heading { align-items: stretch; flex-direction: column; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-wide { grid-column: auto; }
+  .staff-page td .row { flex-wrap: wrap; }
+  .landing-nav { padding: 1rem; }
+  .landing-nav nav { gap: .5rem; }
+  .landing-nav nav > a:not(.btn) { display: none; }
+  .landing-hero { grid-template-columns: 1fr; padding-top: 3rem; }
+  .route-illustration { min-height: 300px; }
+  .service-grid { grid-template-columns: 1fr; }
+  .landing-cta, .landing-footer { align-items: flex-start; flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

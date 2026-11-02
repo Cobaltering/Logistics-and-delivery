@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Warehouse operations - Logistics &amp; Delivery</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<!-- Role-protected warehouse page: data-role must match the user's Supabase role. -->
+<body class="guarded staff-page" data-root="../" data-role="Warehouse Staff">
+  <!-- Header shows the authenticated warehouse employee and provides sign-out. -->
+  <header class="topbar">
+    <a class="brand" href="../index.html">Logistics &amp; Delivery</a>
+    <div class="who"><span id="userName"></span><button class="btn small secondary" id="logoutBtn" type="button">Sign out</button></div>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div><p class="eyebrow">OPERATIONS</p><h1>Warehouse operations</h1><p class="muted">Receive shipments and review their tracking history.</p></div>
+      <button class="btn secondary" id="refreshBtn" type="button">Refresh data</button>
+    </section>
+    <p id="staffNotice" class="msg" hidden></p>
+    <!-- Tabs and matching data-staff-panel sections expose warehouse-only functions. -->
+    <nav class="tabs" id="staffTabs" aria-label="Staff dashboard sections">
+      <button type="button" data-tab="overview" aria-selected="true">Overview</button>
+      <button type="button" data-tab="shipments" aria-selected="false">Shipments</button>
+      <button type="button" data-tab="assignments" aria-selected="false">Assignments</button>
+      <button type="button" data-tab="payments" aria-selected="false">Payments</button>
+      <button type="button" data-tab="cases" aria-selected="false">Incidents &amp; complaints</button>
+      <button type="button" data-tab="admin" aria-selected="false">Administration</button>
+    </nav>
+    <section data-staff-panel="overview" class="staff-panel">
+      <div id="stats" class="stats-grid"></div>
+      <div class="panel"><h2>Warehouse checklist</h2><ul class="check-list"><li>Review incoming packages and shipment details.</li><li>Record each new status as a tracking event.</li><li>Report lost or suspicious shipments promptly.</li></ul></div>
+    </section>
+    <section data-staff-panel="shipments" class="staff-panel" hidden>
+      <div class="panel">
+        <div class="panel-heading"><div><h2>Warehouse shipments</h2><p class="muted">Only shipments assigned to your warehouse are available here.</p></div>
+          <label class="search-field"><span class="sr-only">Search shipments</span><input id="shipmentSearch" type="search" placeholder="Search tracking or recipient"></label></div>
+        <div class="table-wrap"><table><thead><tr><th>Tracking number</th><th>Recipient</th><th>Status</th><th>Booked</th><th>Actions</th></tr></thead><tbody id="shipmentRows"></tbody></table></div>
+        <p id="emptyShipments" class="muted" hidden>No shipments match your search.</p>
+      </div>
+    </section>
+    <section data-staff-panel="assignments" class="staff-panel" hidden><div class="panel"><h2>Rider assignments</h2><p class="muted">Rider assignment is managed by dispatch.</p></div></section>
+    <section data-staff-panel="payments" class="staff-panel" hidden><div class="panel"><h2>Payments</h2><p class="muted">Payment records are restricted to Finance and Administration.</p></div></section>
+    <section data-staff-panel="cases" class="staff-panel" hidden><div class="panel"><h2>Incidents &amp; complaints</h2><p class="muted">Case records are restricted to operational managers and dispatch.</p></div></section>
+    <section data-staff-panel="admin" class="staff-panel" hidden><div class="panel"><h2>Administration</h2><p class="muted">System administration is restricted to administrators.</p></div></section>
+  </main>
+  <!-- Modal dialog populated with immutable shipment tracking events. -->
+  <dialog id="trackingDialog"><h2 id="trackingTitle">Tracking history</h2><div id="trackingDetails"></div><button class="btn secondary" id="closeTracking" type="button">Close</button></dialog>
+  <!-- Supabase SDK loads before the connection, authentication helpers, and shared staff logic. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="../js/supabaseClient.js"></script><script src="../js/auth.js"></script><script src="../js/staff.js"></script>
+</body>
+</html>
