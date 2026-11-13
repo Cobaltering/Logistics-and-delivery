@@ -1,0 +1,66 @@
+/* css/ui-fixes.css
+   Link AFTER styles.css in every dashboard:
+   <link rel="stylesheet" href="../css/ui-fixes.css">
+   Walang binabago sa styles.css; dagdag lang ito. */
+
+/* 1. Hidden tabs/buttons must stay hidden */
+[hidden] { display: none !important; }
+
+/* 2. Tabs: mag-scroll pa-gilid sa phone imbes na mag-wrap o maputol */
+#staffTabs {
+  display: flex;
+  gap: .25rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+#staffTabs::-webkit-scrollbar { display: none; }
+#staffTabs button { flex: 0 0 auto; white-space: nowrap; min-height: 44px; }
+
+/* 3. Mas madaling pindutin ang mga button at input sa phone */
+.btn, button, select, input { min-height: 44px; }
+.btn.small, .btn.small.secondary { min-height: 36px; }
+
+/* 4. Visible keyboard focus */
+:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+
+/* 5. Tables: hindi masisira ang layout sa maliit na screen */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap table { min-width: 560px; width: 100%; border-collapse: collapse; }
+.table-wrap th { text-align: left; white-space: nowrap; }
+.table-wrap th, .table-wrap td { padding: .65rem .75rem; vertical-align: middle; }
+
+/* 6. Empty states: malinaw na kahon, hindi plain text lang */
+#emptyShipments, #emptyPayments, #emptyCases, #emptyJobs {
+  padding: 1.25rem 1rem;
+  text-align: center;
+  border: 1px dashed currentColor;
+  border-radius: 8px;
+  opacity: .75;
+}
+
+/* 7. Status badges (ginagamit ng js/status-badges.js) */
+.badge {
+  display: inline-block;
+  padding: .15rem .6rem;
+  border-radius: 999px;
+  font-size: .8125rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.badge-ok   { background: #dcfce7; color: #166534; }
+.badge-info { background: #dbeafe; color: #1e40af; }
+.badge-warn { background: #fef3c7; color: #92400e; }
+.badge-bad  { background: #fee2e2; color: #991b1b; }
+
+/* 8. Rider: cards ng deliveries */
+.job { padding: 1rem; border: 1px solid rgba(128,128,128,.35); border-radius: 10px; margin-bottom: .75rem; }
+.job .row { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+.job .row .btn { flex: 1 1 140px; }
+
+/* 9. Header: hindi mag-o-overflow ang pangalan ng user sa phone */
+.topbar .who { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+#userName { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
