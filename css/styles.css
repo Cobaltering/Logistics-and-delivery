@@ -1083,6 +1083,18 @@ dialog::backdrop {
     align-items: flex-start;
     flex-direction: column;
   }
+/* Mobile-friendly tables */
+    .staff-page table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .staff-page th,
+    .staff-page td {
+        padding: 0.65rem 0.75rem;
+    }
 }
 
 /* Walang galaw na animation kung ayaw ng user */
