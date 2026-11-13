@@ -46,9 +46,9 @@
       <button type="button" data-tab="overview"    aria-selected="true">Overview</button>
       <button type="button" data-tab="shipments"   aria-selected="false">Shipments</button>
       <button type="button" data-tab="assignments" aria-selected="false">Assignments</button>
-      <button type="button" data-tab="payments"    aria-selected="false">Payments</button>
+      <button type="button" data-tab="payments"    aria-selected="false" hidden>Payments</button>
       <button type="button" data-tab="cases"       aria-selected="false">Incidents &amp; complaints</button>
-      <button type="button" data-tab="admin"       aria-selected="false">Administration</button>
+      <button type="button" data-tab="admin"       aria-selected="false" hidden>Administration</button>
     </nav>
 
     <!-- ================= TAB: OVERVIEW ================= -->
@@ -179,6 +179,7 @@
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/staff.js"></script>
+  <script src="../js/status-badges.js"></script>
 
 </body>
 </html>
