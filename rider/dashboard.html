@@ -13,12 +13,50 @@
 
   <!-- Dito galing ang lahat ng kulay at itsura (CSS file) -->
   <link rel="stylesheet" href="../css/styles.css">
-  <link rel="stylesheet" href="../css/ui-fixes.css">
+  <link rel="stylesheet" href="rider.css">
 </head>
 
 
 <!-- Nakatago ang page hangga't hindi kumpirmadong Delivery Rider ang user -->
 <body class="guarded" data-root="../">
+
+<div class="rider-layout">
+
+  <aside class="rider-sidebar">
+    <div class="rider-brand">
+      Logistics <span>&</span> Delivery
+    </div>
+
+    <p class="rider-nav-label">MAIN MENU</p>
+
+    <nav class="rider-nav">
+      <a href="#overview" class="active">▦ Dashboard</a>
+      <a href="#jobs">📦 My Deliveries</a>
+      <a href="#pending">⏳ Pending</a>
+      <a href="#ongoing">🚚 Ongoing</a>
+      <a href="#completed">✅ Completed</a>
+      <a href="#failed">⚠️ Failed Deliveries</a>
+    </nav>
+
+    <p class="rider-nav-label">ACCOUNT</p>
+
+    <nav class="rider-nav">
+      <a href="#history">📋 Delivery History</a>
+      <a href="#notifications">🔔 Notifications</a>
+      <a href="#profile">👤 My Profile</a>
+    </nav>
+  </aside>
+
+  <div class="rider-main">
+
+    <div class="rider-topbar">
+      <div>
+        <h1>Rider Dashboard</h1>
+        <p class="rider-welcome-text">
+          Manage and monitor your deliveries.
+        </p>
+      </div>
+    </div>
 
 
   <!-- ============================================= -->
@@ -40,6 +78,30 @@
 
 
   <main>
+
+<section class="rider-stats" id="overview">
+
+  <div class="rider-stat-card">
+    <p>Pending Deliveries</p>
+    <h2 id="pendingCount">0</h2>
+  </div>
+
+  <div class="rider-stat-card">
+    <p>Ongoing Deliveries</p>
+    <h2 id="ongoingCount">0</h2>
+  </div>
+
+  <div class="rider-stat-card">
+    <p>Completed Deliveries</p>
+    <h2 id="completedCount">0</h2>
+  </div>
+
+  <div class="rider-stat-card">
+    <p>Failed Deliveries</p>
+    <h2 id="failedCount">0</h2>
+  </div>
+
+</section>
 
     <h2>My assigned deliveries</h2>
     <p class="muted">You only see shipments a dispatcher assigned to you.</p>
@@ -178,14 +240,35 @@
 
       // Kunin lang ang mga padala (shipments) sa data
       const jobs = data.map(d => d.shipments).filter(Boolean);
-
+updateRiderStats(jobs);
       // Itago ang "No deliveries" kapag may delivery
       document.getElementById('emptyJobs').hidden = jobs.length > 0;
 
       // Gumawa ng card para sa bawat delivery at ilagay sa page
       document.getElementById('jobs').innerHTML = jobs.map(makeJobCard).join('');
     }
+ function updateRiderStats(jobs) {
+  const pending = jobs.filter(s =>
+    s.status === 'Created'
+  ).length;
 
+  const ongoing = jobs.filter(s =>
+    ['Picked Up', 'In Transit', 'At Warehouse', 'Out for Delivery'].includes(s.status)
+  ).length;
+
+  const completed = jobs.filter(s =>
+    s.status === 'Delivered'
+  ).length;
+
+  const failed = jobs.filter(s =>
+    s.status === 'Failed Delivery'
+  ).length;
+
+  document.getElementById('pendingCount').textContent = pending;
+  document.getElementById('ongoingCount').textContent = ongoing;
+  document.getElementById('completedCount').textContent = completed;
+  document.getElementById('failedCount').textContent = failed;
+}
 
     /* =========================================================
        4. GUMAWA NG ISANG CARD NG DELIVERY
@@ -193,6 +276,7 @@
        kung gusto mong baguhin ang laman ng card.
        ========================================================= */
     function makeJobCard(s) {
+
 
       // Tapos na ba ang padala? (Delivered, Lost, o Suspicious)
       const finished = ['Delivered', 'Lost', 'Suspicious'].includes(s.status);
