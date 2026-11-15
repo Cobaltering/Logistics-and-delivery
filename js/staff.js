@@ -640,7 +640,8 @@ async function assignWarehouse(event) {
 
 // Isara ang tracking window
 document.getElementById('closeTracking').addEventListener('click', () => {
-  document.getElementById('trackingDialog').close();/* ===== UI FIXES: tabs (keyboard + auto-scroll) ===== */
+    document.getElementById('trackingDialog').close();
+});
 (function () {
   const tablist = document.querySelector('#staffTabs');
   if (!tablist) return;
@@ -683,4 +684,3 @@ document.getElementById('closeTracking').addEventListener('click', () => {
 
   syncTabindex();
 })();
-});
