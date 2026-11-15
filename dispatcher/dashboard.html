@@ -42,14 +42,14 @@
 
     <!-- ================= MGA TAB ================= -->
     <!-- Ang staff.js ang magtatago ng mga tab na hindi para sa Dispatcher -->
-    <nav class="tabs" id="staffTabs" aria-label="Staff dashboard sections">
-      <button type="button" data-tab="overview"    aria-selected="true">Overview</button>
-      <button type="button" data-tab="shipments"   aria-selected="false">Shipments</button>
-      <button type="button" data-tab="assignments" aria-selected="false">Assignments</button>
-      <button type="button" data-tab="payments"    aria-selected="false" hidden>Payments</button>
-      <button type="button" data-tab="cases"       aria-selected="false">Incidents &amp; complaints</button>
-      <button type="button" data-tab="admin"       aria-selected="false" hidden>Administration</button>
-    </nav>
+    <nav class="tabs" id="staffTabs" role="tablist" aria-label="Staff dashboard sections">
+  <button type="button" role="tab" data-tab="overview"    aria-selected="true">Overview</button>
+  <button type="button" role="tab" data-tab="shipments"   aria-selected="false" tabindex="-1">Shipments</button>
+  <button type="button" role="tab" data-tab="assignments" aria-selected="false" tabindex="-1">Assignments</button>
+  <button type="button" role="tab" data-tab="payments"    aria-selected="false" tabindex="-1" hidden>Payments</button>
+  <button type="button" role="tab" data-tab="cases"       aria-selected="false" tabindex="-1">Incidents &amp; complaints</button>
+  <button type="button" role="tab" data-tab="admin"       aria-selected="false" tabindex="-1" hidden>Administration</button>
+</nav>
 
     <!-- ================= TAB: OVERVIEW ================= -->
     <section data-staff-panel="overview" class="staff-panel">
