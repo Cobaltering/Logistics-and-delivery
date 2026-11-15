@@ -1,0 +1,152 @@
+
+/* =========================================
+   RIDER DASHBOARD - NEW UI
+   Separate styling for Rider only
+========================================= */
+
+.rider-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f3f6fa;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* SIDEBAR */
+.rider-sidebar {
+  width: 250px;
+  min-height: 100vh;
+  background: #10283d;
+  color: #fff;
+  padding: 25px 18px;
+  flex-shrink: 0;
+}
+
+.rider-brand {
+  font-family: 'Archivo', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 35px;
+}
+
+.rider-brand span {
+  color: #16b5b0;
+}
+
+.rider-nav-label {
+  color: #8fa7bb;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 25px 10px 12px;
+}
+
+.rider-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rider-nav a {
+  display: block;
+  color: #c5d3df;
+  text-decoration: none;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: .2s;
+}
+
+.rider-nav a:hover,
+.rider-nav a.active {
+  background: #087f91;
+  color: #fff;
+}
+
+/* MAIN CONTENT */
+.rider-main {
+  flex: 1;
+  min-width: 0;
+  padding: 28px;
+}
+
+.rider-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.rider-topbar h1 {
+  color: #172f45;
+  font-size: 25px;
+}
+
+.rider-welcome-text {
+  color: #748398;
+  margin-top: 5px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 760px) {
+  .rider-layout {
+    flex-direction: column;
+  }
+
+  .rider-sidebar {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .rider-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rider-main {
+    padding: 18px;
+  }
+}
+
+/* END RIDER DASHBOARD UI */
+
+/* RIDER OVERVIEW CARDS */
+
+.rider-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 30px;
+}
+
+.rider-stat-card {
+  background: #ffffff;
+  padding: 22px;
+  border-radius: 12px;
+  border: 1px solid #e5eaf0;
+  box-shadow: 0 3px 10px rgba(16, 40, 61, 0.05);
+}
+
+.rider-stat-card p {
+  color: #748398;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.rider-stat-card h2 {
+  color: #10283d;
+  font-size: 30px;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .rider-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .rider-stats {
+    grid-template-columns: 1fr;
+  }
+}
