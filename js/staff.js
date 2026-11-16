@@ -640,5 +640,47 @@ async function assignWarehouse(event) {
 
 // Isara ang tracking window
 document.getElementById('closeTracking').addEventListener('click', () => {
-  document.getElementById('trackingDialog').close();
+    document.getElementById('trackingDialog').close();
 });
+(function () {
+  const tablist = document.querySelector('#staffTabs');
+  if (!tablist) return;
+
+  const visibleTabs = () =>
+    [...tablist.querySelectorAll('[role="tab"]')].filter(t => !t.hidden);
+
+  function syncTabindex() {
+    visibleTabs().forEach(t =>
+      t.tabIndex = t.getAttribute('aria-selected') === 'true' ? 0 : -1
+    );
+  }
+
+  function revealSelected() {
+    const sel = tablist.querySelector('[aria-selected="true"]');
+    if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }
+
+  tablist.addEventListener('keydown', (e) => {
+    const tabs = visibleTabs();
+    const i = tabs.indexOf(document.activeElement);
+    if (i === -1) return;
+
+    let next;
+    if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+    else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+    else if (e.key === 'Home') next = tabs[0];
+    else if (e.key === 'End') next = tabs[tabs.length - 1];
+    else return;
+
+    e.preventDefault();
+    next.focus();
+    next.click();
+  });
+
+  // Walang sariling click listener dito; nakikinig lang sa pagbabago ng aria-selected
+  new MutationObserver(() => { syncTabindex(); revealSelected(); }).observe(tablist, {
+    subtree: true, attributes: true, attributeFilter: ['aria-selected', 'hidden']
+  });
+
+  syncTabindex();
+})();
