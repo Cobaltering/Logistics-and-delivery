@@ -8,6 +8,41 @@
   <title>My shipments - Logistics &amp; Delivery</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
   <link rel="stylesheet" href="../css/styles.css">
+  
+<link rel="stylesheet" href="../css/styles.css">
+
+<!-- ADD CSS HERE -->
+<style>
+.shipment-tools {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 15px 0;
+}
+
+.shipment-tools input,
+.shipment-tools select {
+    padding: 11px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font: inherit;
+    flex: 1;
+    min-width: 150px;
+    background: white;
+}
+
+.shipment-tools input:focus,
+.shipment-tools select:focus {
+    outline: 2px solid #64748b;
+}
+
+@media (max-width: 500px) {
+    .shipment-tools {
+        flex-direction: column;
+    }
+}
+</style>
+
 </head>
 
 <!-- "guarded" = nakatago ang page hanggang makumpirmang Customer ang user -->
@@ -40,6 +75,23 @@
         <p class="muted">Select a shipment to see its tracking history.</p>
         <p id="shipmentLoadMsg" class="msg" hidden></p>
 
+<!-- SEARCH AND FILTER SHIPMENTS -->
+<div class="shipment-tools">
+    <input
+        type="search"
+        id="shipmentSearch"
+        placeholder="Search tracking number or recipient..."
+    >
+
+    <select id="shipmentStatusFilter">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="in transit">In Transit</option>
+        <option value="delivered">Delivered</option>
+        <option value="cancelled">Cancelled</option>
+    </select>
+</div>
+        
         <div class="table-wrap">
           <table>
             <thead>
