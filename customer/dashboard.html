@@ -479,6 +479,57 @@
 
     // Kapag binuksan ang tab na "Updates & help", kunin ulit ang data
     document.querySelector('[data-tab="updates"]').addEventListener('click', loadCustomerUpdates);
+    
+// ===== SEARCH AND FILTER SHIPMENTS =====
+
+const shipmentSearch =
+    document.getElementById('shipmentSearch');
+
+const shipmentStatusFilter =
+    document.getElementById('shipmentStatusFilter');
+
+function filterCustomerShipments() {
+
+    const searchValue =
+        shipmentSearch.value.toLowerCase().trim();
+
+    const statusValue =
+        shipmentStatusFilter.value.toLowerCase();
+
+    document.querySelectorAll('#shipmentRows tr')
+        .forEach(row => {
+
+            const tracking =
+                row.cells[0]?.textContent.toLowerCase() || '';
+
+            const recipient =
+                row.cells[1]?.textContent.toLowerCase() || '';
+
+            const status =
+                row.cells[2]?.textContent.toLowerCase() || '';
+
+            const matchesSearch =
+                tracking.includes(searchValue) ||
+                recipient.includes(searchValue);
+
+            const matchesStatus =
+                !statusValue || status.includes(statusValue);
+
+            row.style.display =
+                matchesSearch && matchesStatus ? '' : 'none';
+        });
+}
+
+shipmentSearch.addEventListener(
+    'input',
+    filterCustomerShipments
+);
+
+shipmentStatusFilter.addEventListener(
+    'change',
+    filterCustomerShipments
+);
+    
   </script>
 </body>
 </html>
